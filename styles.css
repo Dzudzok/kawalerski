@@ -39,11 +39,10 @@ body::before {
   animation: floatbg 16s ease-in-out infinite alternate;
 }
 
-/* TŁO: film z YouTube */
+/* TŁO: własny film */
 #bgVideo {
-  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 100vw; height: 56.25vw; min-height: 100vh; min-width: 177.78vh;
-  z-index: -3; pointer-events: none; border: 0;
+  position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  z-index: -3; pointer-events: none; border: 0; background: var(--bg);
 }
 .bg-overlay {
   position: fixed; inset: 0; z-index: -2; pointer-events: none;

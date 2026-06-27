@@ -1,60 +1,63 @@
 /* =========================================================================
-   Tło strony: film z YouTube (IFrame API) z dźwiękiem.
-   Przeglądarki blokują autoplay z dźwiękiem -> startujemy wyciszeni,
-   a przy PIERWSZYM kliknięciu/tapnięciu włączamy dźwięk na 40%.
+   Tło strony: własny film (assets/bg.mp4) — bez reklam, działa też na telefonie.
+   Autoplay z dźwiękiem jest blokowany przez przeglądarki, więc start jest
+   wyciszony, a przy PIERWSZYM kliknięciu/tapnięciu włączamy dźwięk na 40%.
    Przycisk #soundToggle pozwala ręcznie wyciszyć/włączyć.
+   Jeśli pliku assets/bg.mp4 nie ma — tło zostaje samym gradientem (czysto).
    ========================================================================= */
 (function () {
   "use strict";
-  var VID = "JCSrvjf2pn4";
-  var START_VOLUME = 40;
-  var player = null;
+  var VOL = 0.4;
+  var v = document.getElementById("bgVideo");
+  var btn = document.getElementById("soundToggle");
+  if (!v) return;
+
   var soundOn = false;
-  var ready = false;
+  var hasMedia = false;
 
-  // Wczytaj YouTube IFrame API
-  var tag = document.createElement("script");
-  tag.src = "https://www.youtube.com/iframe_api";
-  document.head.appendChild(tag);
+  function icon() { if (btn) btn.textContent = soundOn ? "🔊" : "🔇"; }
 
-  window.onYouTubeIframeAPIReady = function () {
-    player = new YT.Player("bgVideo", {
-      videoId: VID,
-      playerVars: {
-        autoplay: 1, controls: 0, mute: 1, loop: 1, playlist: VID,
-        playsinline: 1, modestbranding: 1, rel: 0, fs: 0, disablekb: 1,
-        iv_load_policy: 3, start: 0,
-      },
-      events: {
-        onReady: function (e) {
-          ready = true;
-          try { e.target.setVolume(START_VOLUME); } catch (_) {}
-          e.target.playVideo();
-          updateIcon();
-        },
-        onStateChange: function (e) {
-          if (e.data === YT.PlayerState.ENDED) { e.target.seekTo(0); e.target.playVideo(); }
-        },
-      },
-    });
-  };
-
-  function updateIcon() {
-    var b = document.getElementById("soundToggle");
-    if (b) b.textContent = soundOn ? "🔊" : "🔇";
+  function tryPlayMuted() {
+    v.muted = true;
+    v.volume = VOL;
+    var p = v.play();
+    if (p && p.catch) p.catch(function () {});
   }
+
   function enable() {
-    if (!ready || !player) return;
-    try { player.unMute(); player.setVolume(START_VOLUME); } catch (_) {}
-    soundOn = true; updateIcon();
+    if (!hasMedia) return;
+    v.muted = false;
+    v.volume = VOL;
+    var p = v.play();
+    if (p && p.catch) p.catch(function () {});
+    soundOn = true; icon();
   }
   function disable() {
-    if (!ready || !player) return;
-    try { player.mute(); } catch (_) {}
-    soundOn = false; updateIcon();
+    v.muted = true;
+    soundOn = false; icon();
   }
 
-  // Pierwszy gest użytkownika -> włącz dźwięk na 40%
+  // Plik istnieje i da się odtworzyć -> pokaż przycisk dźwięku
+  v.addEventListener("loadeddata", function () {
+    hasMedia = true;
+    if (btn) btn.hidden = false;
+    tryPlayMuted();
+    icon();
+  });
+  // Brak pliku / błąd -> ukryj wideo i przycisk, zostaje gradient
+  v.addEventListener("error", function () {
+    v.style.display = "none";
+    if (btn) btn.hidden = true;
+  });
+  // gdyby <source> nie miał pliku, 'error' leci na <source>; sprawdźmy też po chwili
+  setTimeout(function () {
+    if (!hasMedia && (v.networkState === 3 || v.readyState === 0)) {
+      v.style.display = "none";
+      if (btn) btn.hidden = true;
+    }
+  }, 2500);
+
+  // Pierwszy gest użytkownika -> dźwięk 40%
   function firstGesture() {
     enable();
     document.removeEventListener("click", firstGesture, true);
@@ -63,16 +66,12 @@
   document.addEventListener("click", firstGesture, true);
   document.addEventListener("touchstart", firstGesture, true);
 
-  // Ręczny przełącznik
-  function wireToggle() {
-    var b = document.getElementById("soundToggle");
-    if (!b) return;
-    b.addEventListener("click", function (e) {
+  if (btn) {
+    btn.addEventListener("click", function (e) {
       e.stopPropagation();
       soundOn ? disable() : enable();
     });
-    updateIcon();
   }
-  if (document.readyState !== "loading") wireToggle();
-  else document.addEventListener("DOMContentLoaded", wireToggle);
+
+  tryPlayMuted();
 })();

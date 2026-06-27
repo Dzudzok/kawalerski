@@ -14,12 +14,11 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍺</text></svg>" />
 </head>
 <body>
-  <!-- Tło: własny film/muzyka (bez reklam). Wrzuć plik do assets/bg.mp4 -->
-  <video id="bgVideo" class="bg-video" autoplay loop muted playsinline preload="auto">
-    <source src="assets/bg.mp4" type="video/mp4" />
-  </video>
-  <div class="bg-overlay"></div>
-  <button id="soundToggle" class="sound-toggle" type="button" aria-label="Dźwięk tła" hidden>🔇</button>
+  <!-- Muzyka w tle (bez reklam) -->
+  <audio id="bgAudio" loop preload="auto">
+    <source src="assets/bg.mp3" type="audio/mpeg" />
+  </audio>
+  <button id="soundToggle" class="sound-toggle" type="button" aria-label="Muzyka">🎵</button>
 
   <div class="gate" id="gate">
     <div class="gate-card">

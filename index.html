@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kawalerski Dawida 🍺 — głosowanie</title>
+  <meta name="description" content="Wybór miejsca na kawalerski — 3 opcje, koszty, głosowanie." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍺</text></svg>" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="kicker">Kawalerski • Pan Młody: Dawid Gajdosz</p>
+      <h1>Wybieramy wyjazd 🍻</h1>
+      <p class="subtitle">3 opcje, pełne koszty, głosujesz — <strong>większość wygrywa</strong>.</p>
+      <div class="budget-pill" id="budgetPill">Budżet docelowy: <strong>2000 zł / os</strong></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="identity card" id="identityCard">
+      <h2>1. Kim jesteś?</h2>
+      <p class="muted">Wybierz siebie z listy — Twój głos zapisze się pod tym imieniem (możesz zmienić zdanie później).</p>
+      <select id="whoami" class="who-select"></select>
+      <p class="muted small" id="whoamiNote"></p>
+    </section>
+
+    <section id="options" class="options"></section>
+
+    <section class="results card" id="resultsCard">
+      <h2>📊 Wyniki na żywo</h2>
+      <p class="muted" id="resultsSummary">Ładowanie głosów…</p>
+      <div id="resultsBars"></div>
+    </section>
+
+    <p class="config-banner" id="configBanner" hidden></p>
+  </main>
+
+  <footer>
+    <p>Organizuje: Mateusz Durczok (świadek) • Zrobione na kolanie, ale z sercem ❤️</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

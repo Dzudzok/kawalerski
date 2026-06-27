@@ -44,6 +44,7 @@
   // Które karty są rozwinięte (domyślnie pierwsza opcja).
   const expanded = {};
   OPTIONS.forEach((o, i) => (expanded[o.id] = i === 0));
+  let counterOpen = false; // czy rozwinięty panel "kto co wybrał"
 
   // ---------- Identity ----------
   function renderIdentity() {
@@ -147,6 +148,10 @@
         const fl = el("div", "flights");
         if (opt.flightThere) fl.appendChild(flightRow("➡️", opt.flightThere));
         if (opt.flightBack) fl.appendChild(flightRow("⬅️", opt.flightBack));
+        if (opt.flightNote) {
+          const fn = el("div", "flight-note", opt.flightNote);
+          fl.appendChild(fn);
+        }
         body.appendChild(fl);
       }
 
@@ -267,6 +272,7 @@
     currentVotes[whoami] = optionId; // optimistic
     renderOptions();
     renderResults();
+    renderCounter();
 
     if (sb) {
       const { error } = await sb
@@ -292,6 +298,7 @@
     }
     renderOptions();
     renderResults();
+    renderCounter();
   }
 
   // ---------- Wyniki ----------
@@ -342,6 +349,54 @@
 
   const plural = (n) => (n === 1 ? "" : n >= 2 && n <= 4 ? "y" : "ów");
 
+  // ---------- Sticky licznik (kto co wybrał) ----------
+  function renderCounter() {
+    const bar = $("#liveBar");
+    bar.hidden = false;
+
+    const counts = {};
+    OPTIONS.forEach((o) => (counts[o.id] = []));
+    Object.entries(currentVotes).forEach(([name, oid]) => {
+      if (counts[oid]) counts[oid].push(name);
+    });
+    const total = Object.values(currentVotes).length;
+    const leadCount = Math.max(0, ...OPTIONS.map((o) => counts[o.id].length));
+
+    // Chipsy: emoji + liczba
+    const chips = $("#lbChips");
+    chips.innerHTML = "";
+    OPTIONS.forEach((o) => {
+      const c = counts[o.id].length;
+      const chip = el("span", "lb-chip" + (c === leadCount && leadCount > 0 ? " lead" : ""));
+      chip.innerHTML = `${o.emoji || "📍"} <b>${c}</b>`;
+      chip.title = o.title;
+      chips.appendChild(chip);
+    });
+    $("#lbTotal").textContent = `${total}/${TOTAL_PEOPLE}`;
+
+    // Szczegóły: kto co wybrał
+    const detail = $("#lbDetail");
+    detail.hidden = !counterOpen;
+    $("#lbCaret").style.transform = counterOpen ? "rotate(180deg)" : "";
+    if (counterOpen) {
+      detail.innerHTML = "";
+      OPTIONS.forEach((o) => {
+        const names = counts[o.id];
+        const row = el("div", "lbd-row");
+        row.appendChild(el("span", "lbd-opt", `${o.emoji || "📍"} ${o.title}`));
+        row.appendChild(el("span", "lbd-names", names.length ? names.map(firstName).join(", ") : "—"));
+        detail.appendChild(row);
+      });
+      const notVoted = PARTICIPANTS.filter((p) => !currentVotes[p.name]).map((p) => firstName(p.name));
+      if (notVoted.length) {
+        const nv = el("div", "lbd-row lbd-novote");
+        nv.appendChild(el("span", "lbd-opt", "⏳ Brak głosu"));
+        nv.appendChild(el("span", "lbd-names", notVoted.join(", ")));
+        detail.appendChild(nv);
+      }
+    }
+  }
+
   // ---------- Banner ----------
   function renderBanner() {
     if (hasSupabase) return;
@@ -361,8 +416,14 @@
   }
 
   // ---------- Init ----------
+  $("#lbToggle").onclick = () => {
+    counterOpen = !counterOpen;
+    $("#lbToggle").setAttribute("aria-expanded", counterOpen ? "true" : "false");
+    renderCounter();
+  };
   renderIdentity();
   renderBanner();
+  renderCounter();
   loadVotes();
   subscribe();
 })();

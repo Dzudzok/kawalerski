@@ -41,6 +41,9 @@
   const WHO_KEY = "kawalerski_whoami";
   let whoami = localStorage.getItem(WHO_KEY) || "";
   let currentVotes = {}; // { name: optionId }
+  // Które karty są rozwinięte (domyślnie pierwsza opcja).
+  const expanded = {};
+  OPTIONS.forEach((o, i) => (expanded[o.id] = i === 0));
 
   // ---------- Identity ----------
   function renderIdentity() {
@@ -82,24 +85,48 @@
     OPTIONS.forEach((opt) => {
       const { base, yours } = totals(opt);
       const ready = optionReady(opt);
-      const card = el("article", "card option" + (myVote === opt.id ? " chosen" : ""));
+      const isOpen = !!expanded[opt.id];
+      const over = yours > BUDGET_TARGET;
+      const card = el("article",
+        "card option" + (myVote === opt.id ? " chosen" : "") + (isOpen ? "" : " collapsed"));
 
-      // --- Header ---
-      const head = el("div", "opt-head");
+      // --- Summary (zawsze widoczne, klikalne) ---
+      const head = el("button", "opt-head");
+      head.type = "button";
+      head.setAttribute("aria-expanded", isOpen ? "true" : "false");
       const titleRow = el("div", "title-row");
       titleRow.appendChild(el("span", "opt-emoji", opt.emoji || "📍"));
-      const tcol = el("div");
+      const tcol = el("div", "title-col");
       tcol.appendChild(el("h2", "", `${opt.title} <span class="country">${opt.country || ""}</span>`));
       if (opt.subtitle) tcol.appendChild(el("p", "muted opt-sub", opt.subtitle));
       titleRow.appendChild(tcol);
       head.appendChild(titleRow);
 
+      const sumRight = el("div", "head-right");
+      if (ready) {
+        const price = el("div", "head-price");
+        price.appendChild(el("span", "hp-label", "Twoja cena"));
+        price.appendChild(el("span", "hp-amt" + (over ? " over" : ""), zl(yours)));
+        sumRight.appendChild(price);
+        sumRight.appendChild(el("span", "head-budget " + (over ? "over" : "ok"),
+          over ? "ponad budżet" : "w budżecie"));
+      } else {
+        sumRight.appendChild(el("span", "head-soon", "wkrótce"));
+      }
+      sumRight.appendChild(el("span", "chevron", "▾"));
+      head.appendChild(sumRight);
+
+      head.onclick = () => { expanded[opt.id] = !expanded[opt.id]; renderOptions(); };
+      card.appendChild(head);
+
+      // --- Body (zwijane) ---
+      const body = el("div", "opt-body");
+
       if (opt.badges && opt.badges.length) {
         const b = el("div", "badges");
         opt.badges.forEach((x) => b.appendChild(el("span", "badge", x)));
-        head.appendChild(b);
+        body.appendChild(b);
       }
-      card.appendChild(head);
 
       // --- Galeria ---
       if (opt.images && opt.images.length) {
@@ -112,7 +139,7 @@
           a.appendChild(img);
           gal.appendChild(a);
         });
-        card.appendChild(gal);
+        body.appendChild(gal);
       }
 
       // --- Loty ---
@@ -120,7 +147,7 @@
         const fl = el("div", "flights");
         if (opt.flightThere) fl.appendChild(flightRow("➡️", opt.flightThere));
         if (opt.flightBack) fl.appendChild(flightRow("⬅️", opt.flightBack));
-        card.appendChild(fl);
+        body.appendChild(fl);
       }
 
       // --- Lokalizacja + mapa ---
@@ -155,7 +182,7 @@
           det.appendChild(im);
           loc.appendChild(det);
         }
-        card.appendChild(loc);
+        body.appendChild(loc);
       }
 
       // --- Koszty ---
@@ -170,20 +197,19 @@
           row.appendChild(el("div", "cost-amt", zl(c.amount)));
           table.appendChild(row);
         });
-        card.appendChild(table);
+        body.appendChild(table);
 
         const sum = el("div", "summary");
         sum.appendChild(rowKV("Suma na osobę (baza)", zl(base), false));
         sum.appendChild(rowKV("👉 Twoja cena (Pan Młody nie płaci)", zl(yours), true));
-        const over = yours > BUDGET_TARGET;
         sum.appendChild(el(
           "div", "budget-badge " + (over ? "over" : "ok"),
           over ? `⚠️ ${zl(yours - BUDGET_TARGET)} ponad budżet`
                : `✅ w budżecie • ${zl(BUDGET_TARGET - yours)} zapasu`
         ));
-        card.appendChild(sum);
+        body.appendChild(sum);
       } else {
-        card.appendChild(el("p", "todo", "🚧 Szczegóły i koszty wkrótce — uzupełniane."));
+        body.appendChild(el("p", "todo", "🚧 Szczegóły i koszty wkrótce — uzupełniane."));
       }
 
       // --- Highlights ---
@@ -193,7 +219,7 @@
         const ul = el("ul", "highlights");
         opt.highlights.forEach((x) => ul.appendChild(el("li", "", x)));
         h.appendChild(ul);
-        card.appendChild(h);
+        body.appendChild(h);
       }
 
       // --- Linki ---
@@ -203,7 +229,7 @@
           '<span class="bk-logo">Booking.com</span><span class="bk-text">Zobacz pełną ofertę i zdjęcia →</span>');
         a.href = opt.bookingLink; a.target = "_blank"; a.rel = "noopener";
         links.appendChild(a);
-        card.appendChild(links);
+        body.appendChild(links);
       }
 
       // --- Głosowanie ---
@@ -215,8 +241,9 @@
       btn.title = whoami ? "" : "Najpierw wybierz kim jesteś (na górze)";
       btn.onclick = () => castVote(opt.id);
       voteWrap.appendChild(btn);
-      card.appendChild(voteWrap);
+      body.appendChild(voteWrap);
 
+      card.appendChild(body);
       wrap.appendChild(card);
     });
   }

@@ -24,3 +24,23 @@ create policy "anon update" on public.kawalerski_votes for update using (true) w
 
 -- (opcjonalnie) realtime — żeby wyniki odświeżały się na żywo
 alter publication supabase_realtime add table public.kawalerski_votes;
+
+
+-- ===========================================================================
+-- CZAT GRUPOWY — uruchom też ten blok (jeśli już masz głosowanie, wystarczy ten kawałek).
+-- ===========================================================================
+create table if not exists public.kawalerski_chat (
+  id          bigint generated always as identity primary key,
+  name        text not null,             -- kto napisał
+  text        text not null,             -- treść wiadomości
+  created_at  timestamptz not null default now()
+);
+
+alter table public.kawalerski_chat enable row level security;
+
+drop policy if exists "chat read"   on public.kawalerski_chat;
+drop policy if exists "chat insert" on public.kawalerski_chat;
+create policy "chat read"   on public.kawalerski_chat for select using (true);
+create policy "chat insert" on public.kawalerski_chat for insert with check (true);
+
+alter publication supabase_realtime add table public.kawalerski_chat;

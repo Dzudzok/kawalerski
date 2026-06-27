@@ -12,6 +12,7 @@
     !String(window.SUPABASE_ANON_KEY).startsWith("WKLEJ");
 
   const TABLE = "kawalerski_votes";
+  const CHAT_TABLE = "kawalerski_chat";
   const sb = hasSupabase
     ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
     : null;
@@ -64,6 +65,7 @@
       localStorage.setItem(WHO_KEY, whoami);
       updateWhoamiNote();
       renderOptions();
+      renderChat();
     };
     updateWhoamiNote();
   }
@@ -424,6 +426,77 @@
     }
   }
 
+  // ---------- Czat grupowy 💬 ----------
+  let chatMessages = [];
+
+  function timeStr(iso) {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+    } catch (e) { return ""; }
+  }
+
+  function renderChat() {
+    const box = $("#chatMsgs");
+    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    box.innerHTML = "";
+    if (!chatMessages.length) {
+      box.appendChild(el("p", "chat-empty", "Jeszcze cisza… napisz pierwszy! 🍻"));
+    }
+    chatMessages.forEach((m) => {
+      const mine = m.name === whoami;
+      const row = el("div", "chat-msg" + (mine ? " mine" : ""));
+      if (!mine) row.appendChild(el("span", "chat-name", firstName(m.name || "?")));
+      const bubble = el("div", "chat-bubble");
+      bubble.appendChild(el("span", "chat-text", escapeHtml(m.text || "")));
+      bubble.appendChild(el("span", "chat-time", timeStr(m.created_at)));
+      row.appendChild(bubble);
+      box.appendChild(row);
+    });
+    if (nearBottom) box.scrollTop = box.scrollHeight;
+
+    // Stan inputa zależny od wyboru tożsamości
+    const input = $("#chatInput");
+    const ok = !!whoami;
+    input.disabled = !ok;
+    $("#chatSend").disabled = !ok;
+    input.placeholder = ok ? `Piszesz jako ${firstName(whoami)}…` : "Najpierw wybierz kim jesteś (na górze)";
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  async function loadChat() {
+    if (sb) {
+      const { data, error } = await sb
+        .from(CHAT_TABLE)
+        .select("name, text, created_at")
+        .order("created_at", { ascending: true })
+        .limit(300);
+      if (!error && data) chatMessages = data;
+    } else {
+      try { chatMessages = JSON.parse(localStorage.getItem("kawalerski_chat_local")) || []; }
+      catch (e) { chatMessages = []; }
+    }
+    renderChat();
+  }
+
+  async function sendChat(text) {
+    if (!whoami || !text.trim()) return;
+    const msg = { name: whoami, text: text.trim(), created_at: new Date().toISOString() };
+    if (sb) {
+      const { error } = await sb.from(CHAT_TABLE).insert({ name: msg.name, text: msg.text });
+      if (error) { alert("Nie udało się wysłać: " + error.message); return; }
+      await loadChat();
+    } else {
+      chatMessages.push(msg);
+      localStorage.setItem("kawalerski_chat_local", JSON.stringify(chatMessages));
+      renderChat();
+    }
+  }
+
   // ---------- Banner ----------
   function renderBanner() {
     if (hasSupabase) return;
@@ -439,7 +512,11 @@
     sb.channel("votes-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, loadVotes)
       .subscribe();
+    sb.channel("chat-rt")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: CHAT_TABLE }, loadChat)
+      .subscribe();
     setInterval(loadVotes, 8000);
+    setInterval(loadChat, 8000);
   }
 
   // ---------- Init ----------
@@ -448,9 +525,18 @@
     $("#lbToggle").setAttribute("aria-expanded", counterOpen ? "true" : "false");
     renderCounter();
   };
+  $("#chatForm").onsubmit = (e) => {
+    e.preventDefault();
+    const input = $("#chatInput");
+    const text = input.value;
+    input.value = "";
+    sendChat(text);
+  };
   renderIdentity();
   renderBanner();
   renderCounter();
+  renderChat();
   loadVotes();
+  loadChat();
   subscribe();
 })();

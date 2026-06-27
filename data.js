@@ -1,11 +1,14 @@
 /* =========================================================================
    DANE OFERTY — JEDYNY PLIK, KTÓRY EDYTUJESZ, ŻEBY ZMIENIĆ TREŚĆ.
-   - Każdy koszt to kwota NA OSOBĘ w zł (ile kosztuje 1 uczestnika).
-   - Strona sama policzy: sumę na osobę ORAZ Twoją realną cenę z uwzględnieniem,
-     że Pan Młody nie płaci (jego część dzielona jest na płacących => ×11/10).
+   Koszty:
+   - domyślnie kwota jest NA OSOBĘ (np. bilet lotniczy 540 zł/os).
+   - dodaj `shared: true`, jeśli kwota to KOSZT CAŁEJ EKIPY do podziału
+     (np. apartament 5789 zł za całość) — strona podzieli go przez liczbę osób.
+   Strona liczy cenę na całą ekipę (10 os) ORAZ na żywo wg zgłoszeń
+   (ile osób już zaakceptowało). Pan Młody nie płaci — jego część idzie na płacących.
    ========================================================================= */
 
-// --- Uczestnicy (11 osób) ---
+// --- Uczestnicy (10 osób) ---
 // pays:false => ta osoba nie płaci, jej koszt rozkłada się na pozostałych.
 const PARTICIPANTS = [
   { name: "Dawid Gajdosz",    pays: false, tag: "Pan Młody 🤵" },
@@ -18,7 +21,6 @@ const PARTICIPANTS = [
   { name: "Andrzej Nawrot",   pays: true },
   { name: "Patryk Neuman",    pays: true },
   { name: "Damian Durczok",   pays: true },
-  { name: "Artur Szkoła",     pays: true },
 ];
 
 const BUDGET_TARGET = 2000; // zł / os
@@ -32,7 +34,7 @@ const OPTIONS = [
     title: "SPLIT",
     country: "Chorwacja 🇭🇷",
     subtitle: "Cały dom z basenem tylko dla nas",
-    badges: ["📅 30.07 – 02.08.2026", "Ocena 7,6 / 10 (220 opinii)", "Lokalizacja 7,7", "3 noce • 11 osób"],
+    badges: ["📅 30.07 – 02.08.2026", "Ocena 7,6 / 10 (220 opinii)", "Lokalizacja 7,7", "3 noce • 10 osób"],
     place: "Apartament z balkonem z widokiem na morze",
     address: "Domovinskog Rata 129, Podstrana, Split",
     mapQuery: "Domovinskog Rata 129, Podstrana, Split, Croatia",
@@ -47,7 +49,7 @@ const OPTIONS = [
     flightBack: "Nd 22:45  Split ✈ 00:30  Katowice",
     costs: [
       { label: "Samolot (tam i z powrotem)", amount: 540, icon: "✈️" },
-      { label: "Apartament / dom z basenem",  amount: 526, icon: "🏠", note: "5 789 zł za 11 os • do centrum Uberem" },
+      { label: "Apartament / dom z basenem",  amount: 5789, shared: true, icon: "🏠", note: "5 789 zł za całą ekipę • do centrum Uberem" },
       { label: "Wejścia na imprezy",          amount: 100, icon: "🎉", note: "ok. 100 zł wejście" },
       { label: "Uber: dom – lotnisko – hotel", amount: 75,  icon: "🚕" },
       { label: "Jedzenie (pt–sb–nd)",          amount: 250, icon: "🍖", note: "SZACUNEK – grill, śniadania grupowe; sob. restauracja każdy za siebie" },
@@ -60,7 +62,7 @@ const OPTIONS = [
     ],
     highlights: [
       "🏊 Cały dom z basenem tylko dla nas",
-      "🍖 Grill dla 11 os + wspólne śniadania",
+      "🍖 Grill dla 10 os + wspólne śniadania",
       "🏖️ Plaża • Morze • Imprezy",
       "🏛️ Centrum Splitu i Pałac Dioklecjana",
       "🚤 Opcjonalnie: łódź na morzu (4h)",
@@ -74,7 +76,7 @@ const OPTIONS = [
     title: "DUBROVNIK",
     country: "Chorwacja 🇭🇷",
     subtitle: "Apartament w centrum (bez basenu)",
-    badges: ["📅 31.07 – 02.08.2026", "🟠 Wylot w PIĄTEK (nie czw. jak Split)", "2 noce • 11 osób", "Apartament • bez basenu"],
+    badges: ["📅 31.07 – 02.08.2026", "🟠 Wylot w PIĄTEK (nie czw. jak Split)", "2 noce • 10 osób", "Apartament • bez basenu"],
     place: "Apartments Villa Dadić",
     address: "Dubrovnik, Chorwacja",
     mapQuery: "Apartments Villa Dadic, Dubrovnik, Croatia",
@@ -89,7 +91,7 @@ const OPTIONS = [
     flightNote: "⚠️ Wylot w PIĄTEK — o 1 dzień krócej niż Split (2 noce zamiast 3)",
     costs: [
       { label: "Samolot (tam i z powrotem)", amount: 342, icon: "✈️" },
-      { label: "Apartament w centrum",        amount: 540, icon: "🏠", note: "5 943 zł za 11 os • bez basenu" },
+      { label: "Apartament w centrum",        amount: 5943, shared: true, icon: "🏠", note: "5 943 zł za całą ekipę • bez basenu" },
       { label: "Wejścia na imprezy",          amount: 100, icon: "🎉", note: "ok. 100 zł wejście" },
       { label: "Uber: dom – lotnisko – hotel", amount: 75,  icon: "🚕" },
       { label: "Jedzenie (pt wiecz.–sb–nd)",   amount: 220, icon: "🍽️", note: "SZACUNEK – śniadania grupowe; sob. restauracja każdy za siebie (bez grilla)" },
@@ -114,7 +116,7 @@ const OPTIONS = [
     title: "SŁONECZNY BRZEG",
     country: "Bułgaria 🇧🇬",
     subtitle: "Hotel z basenem — stolica imprez",
-    badges: ["📅 30.07 – 02.08.2026", "🟡 Pt ~południe → Nd rano", "Ocena 8,7 (180 opinii)", "Lokalizacja 8,2", "Basen + grill", "3 noce • 11 osób"],
+    badges: ["📅 30.07 – 02.08.2026", "🟡 Pt ~południe → Nd rano", "Ocena 8,7 (180 opinii)", "Lokalizacja 8,2", "Basen + grill", "3 noce • 10 osób"],
     place: "Rose Garden Omax Apartments",
     address: "101 Chayka Str, Słoneczny Brzeg, Bułgaria",
     mapQuery: "Rose Garden Omax Apartments, 101 Chayka Str, Sunny Beach, Bulgaria",
@@ -129,7 +131,7 @@ const OPTIONS = [
     flightNote: "🟡 Realnie od połowy piątku do połowy niedzieli (wylot pt ~południe, powrót nd rano)",
     costs: [
       { label: "Samolot (tam i z powrotem)", amount: 540, icon: "✈️" },
-      { label: "Hotel z basenem",            amount: 228, icon: "🏨", note: "2 504 zł za 11 os • 3× apartament Studio z balkonem" },
+      { label: "Hotel z basenem",            amount: 2504, shared: true, icon: "🏨", note: "2 504 zł za całą ekipę • 3× apartament Studio z balkonem" },
       { label: "Wejścia na imprezy",          amount: 100, icon: "🎉", note: "ok. 100 zł wejście" },
       { label: "Transport dom – lotnisko – hotel", amount: 75, icon: "🚕" },
       { label: "Jedzenie (pt wiecz.–sb–nd poł.)", amount: 250, icon: "🍖", note: "SZACUNEK – grill, grupowe śniadania i kolacje; sob. restauracja każdy za siebie" },

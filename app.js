@@ -28,13 +28,37 @@
   const zl = (n) => Math.round(n).toLocaleString("pl-PL") + " zł";
   const firstName = (full) => full.split(" ")[0];
 
-  const PAYERS = PARTICIPANTS.filter((p) => p.pays).length;
   const TOTAL_PEOPLE = PARTICIPANTS.length;
+  // Cała ekipa: G = wszyscy, P = płacący (Pan Młody nie płaci)
+  const FULL = { G: PARTICIPANTS.length, P: PARTICIPANTS.filter((p) => p.pays).length };
+
+  // Kto już zaakceptował (oddał głos) = idzie na wyjazd
+  function goingNow() {
+    const voted = currentVotes;
+    const set = PARTICIPANTS.filter((p) => voted[p.name]);
+    return { G: set.length, P: set.filter((p) => p.pays).length };
+  }
+
+  // Cena na 1 osobę płacącą przy liczebności going = {G, P}
+  function pricePerPayer(option, going) {
+    let pp = 0, shared = 0;
+    (option.costs || []).forEach((c) => {
+      if (c.shared) shared += c.amount || 0; else pp += c.amount || 0;
+    });
+    const total = pp * going.G + shared;       // koszt całej grupy
+    return going.P > 0 ? total / going.P : null; // dzielony na płacących
+  }
+
+  function groupTotal(option, going) {
+    let pp = 0, shared = 0;
+    (option.costs || []).forEach((c) => {
+      if (c.shared) shared += c.amount || 0; else pp += c.amount || 0;
+    });
+    return pp * going.G + shared;
+  }
 
   function totals(option) {
-    const base = (option.costs || []).reduce((s, c) => s + (c.amount || 0), 0);
-    const yours = PAYERS > 0 ? base * (TOTAL_PEOPLE / PAYERS) : base;
-    return { base, yours };
+    return { full: pricePerPayer(option, FULL), now: pricePerPayer(option, goingNow()) };
   }
   const optionReady = (o) => (o.costs || []).length > 0;
 
@@ -42,14 +66,13 @@
   const WHO_KEY = "kawalerski_whoami";
   let whoami = localStorage.getItem(WHO_KEY) || "";
   let currentVotes = {}; // { name: optionId }
-  // Które karty są rozwinięte (domyślnie pierwsza opcja).
+  // Które karty są rozwinięte (domyślnie wszystko zwinięte).
   const expanded = {};
-  OPTIONS.forEach((o, i) => (expanded[o.id] = i === 0));
+  OPTIONS.forEach((o) => (expanded[o.id] = false));
   let counterOpen = false; // czy rozwinięty panel "kto co wybrał"
 
-  // ---------- Identity ----------
-  function renderIdentity() {
-    const sel = $("#whoami");
+  // ---------- Identity + bramka ----------
+  function fillSelect(sel) {
     sel.innerHTML = "";
     const ph = el("option", "", "— wybierz siebie —");
     ph.value = "";
@@ -60,13 +83,30 @@
       if (p.name === whoami) o.selected = true;
       sel.appendChild(o);
     });
-    sel.onchange = () => {
-      whoami = sel.value;
-      localStorage.setItem(WHO_KEY, whoami);
-      updateWhoamiNote();
-      renderOptions();
-      renderChat();
-    };
+  }
+
+  function updateGate() {
+    $("#gate").classList.toggle("open", !whoami);
+    document.body.style.overflow = whoami ? "" : "hidden";
+  }
+
+  function setWhoami(name) {
+    whoami = name;
+    localStorage.setItem(WHO_KEY, whoami);
+    $("#whoami").value = whoami;
+    $("#gateSelect").value = whoami;
+    updateGate();
+    updateWhoamiNote();
+    renderOptions();
+    renderChat();
+  }
+
+  function renderIdentity() {
+    fillSelect($("#whoami"));
+    fillSelect($("#gateSelect"));
+    $("#whoami").onchange = (e) => setWhoami(e.target.value);
+    $("#gateSelect").onchange = (e) => setWhoami(e.target.value);
+    updateGate();
     updateWhoamiNote();
   }
 
@@ -85,11 +125,12 @@
     wrap.innerHTML = "";
     const myVote = currentVotes[whoami];
 
+    const now = goingNow();
     OPTIONS.forEach((opt) => {
-      const { base, yours } = totals(opt);
+      const { full, now: nowPrice } = totals(opt);
       const ready = optionReady(opt);
       const isOpen = !!expanded[opt.id];
-      const over = yours > BUDGET_TARGET;
+      const over = full > BUDGET_TARGET;
       const card = el("article",
         "card option" + (myVote === opt.id ? " chosen" : "") + (isOpen ? "" : " collapsed"));
 
@@ -108,8 +149,10 @@
       const sumRight = el("div", "head-right");
       if (ready) {
         const price = el("div", "head-price");
-        price.appendChild(el("span", "hp-label", "Twoja cena"));
-        price.appendChild(el("span", "hp-amt" + (over ? " over" : ""), zl(yours)));
+        price.appendChild(el("span", "hp-label", `Cena / os (${FULL.G})`));
+        price.appendChild(el("span", "hp-amt" + (over ? " over" : ""), zl(full)));
+        price.appendChild(el("span", "hp-now",
+          nowPrice ? `teraz: ${zl(nowPrice)} (${now.G})` : "teraz: — (0 zgłoszeń)"));
         sumRight.appendChild(price);
         sumRight.appendChild(el("span", "head-budget " + (over ? "over" : "ok"),
           over ? "ponad budżet" : "w budżecie"));
@@ -201,18 +244,24 @@
           left.appendChild(el("span", "cost-main", `${c.icon || "•"} ${c.label}`));
           if (c.note) left.appendChild(el("span", "cost-note", c.note));
           row.appendChild(left);
-          row.appendChild(el("div", "cost-amt", zl(c.amount)));
+          row.appendChild(el("div", "cost-amt",
+            zl(c.amount) + `<span class="cost-per">/ ${c.shared ? "ekipa" : "os"}</span>`));
           table.appendChild(row);
         });
         body.appendChild(table);
 
         const sum = el("div", "summary");
-        sum.appendChild(rowKV("Suma na osobę (baza)", zl(base), false));
-        sum.appendChild(rowKV("👉 Twoja cena (Pan Młody nie płaci)", zl(yours), true));
+        sum.appendChild(rowKV(`Koszt całej ekipy (${FULL.G} os)`, zl(groupTotal(opt, FULL)), false));
+        sum.appendChild(rowKV(`÷ ${FULL.P} płacących (Pan Młody gratis 🤵)`, "", false));
+        sum.appendChild(rowKV("👉 Cena na osobę", zl(full), true));
+        const nowRow = rowKV(`Teraz wg zgłoszeń (${now.G}/${FULL.G} chętnych)`,
+          nowPrice ? zl(nowPrice) : "— brak zgłoszeń", false);
+        nowRow.classList.add("now-row");
+        sum.appendChild(nowRow);
         sum.appendChild(el(
           "div", "budget-badge " + (over ? "over" : "ok"),
-          over ? `⚠️ ${zl(yours - BUDGET_TARGET)} ponad budżet`
-               : `✅ w budżecie • ${zl(BUDGET_TARGET - yours)} zapasu`
+          over ? `⚠️ ${zl(full - BUDGET_TARGET)} ponad budżet`
+               : `✅ w budżecie • ${zl(BUDGET_TARGET - full)} zapasu`
         ));
         body.appendChild(sum);
       } else {

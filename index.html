@@ -14,6 +14,16 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍺</text></svg>" />
 </head>
 <body>
+  <div class="gate" id="gate">
+    <div class="gate-card">
+      <div class="gate-emoji">🍺</div>
+      <p class="gate-kicker">Kawalerski Dawida</p>
+      <h2>Cześć! Kim jesteś?</h2>
+      <p class="muted">Wybierz siebie, żeby zobaczyć opcje, koszty i zagłosować.</p>
+      <select id="gateSelect" class="who-select" aria-label="Wybierz kim jesteś"></select>
+    </div>
+  </div>
+
   <header class="hero">
     <div class="hero-glow"></div>
     <div class="hero-inner">
@@ -21,7 +31,7 @@
       <h1>Dokąd jedziemy<br />na ostatni wyskok? 🔥</h1>
       <p class="subtitle">3 opcje • pełne koszty na osobę • głosujesz prosto z telefonu</p>
       <div class="pills">
-        <span class="pill">👥 11 ludzi</span>
+        <span class="pill">👥 10 ludzi</span>
         <span class="pill">🎯 budżet 2000 zł/os</span>
         <span class="pill">🏆 większość wygrywa</span>
       </div>
@@ -49,10 +59,12 @@
     <section id="options" class="options"></section>
 
     <details class="card explainer">
-      <summary>💡 Dlaczego „Twoja cena" jest wyższa niż suma pozycji?</summary>
-      <p>Pan Młody (Dawid) nie płaci. Jego część kosztów dzieli się równo na pozostałych
-      <strong>10 płacących</strong>. Dlatego Twoja realna cena = suma bazowa × 11/10.
-      Każda pozycja w rozbiciu kosztów to kwota przypadająca na 1 osobę.</p>
+      <summary>💡 Jak liczona jest cena?</summary>
+      <p><strong>Cena na ekipę</strong> = wszystkie koszty całej grupy (10 os) podzielone na osoby płacące.
+      Koszty wspólne (apartament/hotel) dzielimy przez liczbę osób, a bilety/wejścia są per osoba.
+      <strong>Pan Młody (Dawid) nie płaci</strong> — jego część rozkłada się na pozostałych.
+      Mała kwota „teraz" pokazuje cenę wyliczoną na żywo wg osób, które już zaakceptowały (zagłosowały) —
+      im więcej chętnych, tym taniej.</p>
     </details>
 
     <section class="results card" id="resultsCard">

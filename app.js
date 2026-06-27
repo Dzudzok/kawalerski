@@ -98,7 +98,7 @@
     updateGate();
     updateWhoamiNote();
     renderOptions();
-    renderChat();
+    if (window.KawalerskiChat) KawalerskiChat.refresh();
   }
 
   function renderIdentity() {
@@ -126,13 +126,19 @@
     const myVote = currentVotes[whoami];
 
     const now = goingNow();
+    const me = PARTICIPANTS.find((p) => p.name === whoami);
+    const mePays = me ? me.pays : true;
     OPTIONS.forEach((opt) => {
       const { full, now: nowPrice } = totals(opt);
+      const yourFull = mePays ? full : 0;     // Pan Młody nie płaci => 0 zł
+      const yourNow = mePays ? nowPrice : 0;
       const ready = optionReady(opt);
       const isOpen = !!expanded[opt.id];
-      const over = full > BUDGET_TARGET;
+      const over = yourFull > BUDGET_TARGET;
       const card = el("article",
-        "card option" + (myVote === opt.id ? " chosen" : "") + (isOpen ? "" : " collapsed"));
+        "card option" + (opt.favorite ? " favorite" : "") +
+        (myVote === opt.id ? " chosen" : "") + (isOpen ? "" : " collapsed"));
+      if (opt.favorite) card.appendChild(el("div", "fav-ribbon", "⭐ FAWORYT"));
 
       // --- Summary (zawsze widoczne, klikalne) ---
       const head = el("button", "opt-head");
@@ -149,13 +155,14 @@
       const sumRight = el("div", "head-right");
       if (ready) {
         const price = el("div", "head-price");
-        price.appendChild(el("span", "hp-label", `Cena / os (${FULL.G})`));
-        price.appendChild(el("span", "hp-amt" + (over ? " over" : ""), zl(full)));
-        price.appendChild(el("span", "hp-now",
-          nowPrice ? `teraz: ${zl(nowPrice)} (${now.G})` : "teraz: — (0 zgłoszeń)"));
+        price.appendChild(el("span", "hp-label", "Twoja cena"));
+        price.appendChild(el("span", "hp-amt" + (over ? " over" : ""), zl(yourFull)));
+        price.appendChild(el("span", "hp-now", !mePays
+          ? "Pan Młody nie płaci 🎉"
+          : (nowPrice ? `teraz: ${zl(yourNow)} (${now.G})` : "teraz: — (0 zgłoszeń)")));
         sumRight.appendChild(price);
         sumRight.appendChild(el("span", "head-budget " + (over ? "over" : "ok"),
-          over ? "ponad budżet" : "w budżecie"));
+          !mePays ? "gratis 🎉" : (over ? "ponad budżet" : "w budżecie")));
       } else {
         sumRight.appendChild(el("span", "head-soon", "wkrótce"));
       }
@@ -174,16 +181,21 @@
         body.appendChild(b);
       }
 
+      if (opt.warning) {
+        body.appendChild(el("div", "opt-warning", "⚠️ " + opt.warning));
+      }
+
       // --- Galeria ---
       if (opt.images && opt.images.length) {
         const gal = el("div", "gallery");
         opt.images.forEach((src) => {
-          const a = el("a");
-          a.href = src; a.target = "_blank"; a.rel = "noopener";
+          const btn = el("button", "gal-item");
+          btn.type = "button";
           const img = el("img");
           img.loading = "lazy"; img.src = src; img.alt = opt.title;
-          a.appendChild(img);
-          gal.appendChild(a);
+          btn.appendChild(img);
+          btn.onclick = () => openLightbox(src, opt.title);
+          gal.appendChild(btn);
         });
         body.appendChild(gal);
       }
@@ -252,16 +264,17 @@
 
         const sum = el("div", "summary");
         sum.appendChild(rowKV(`Koszt całej ekipy (${FULL.G} os)`, zl(groupTotal(opt, FULL)), false));
-        sum.appendChild(rowKV(`÷ ${FULL.P} płacących (Pan Młody gratis 🤵)`, "", false));
-        sum.appendChild(rowKV("👉 Cena na osobę", zl(full), true));
+        sum.appendChild(rowKV(`÷ ${FULL.P} płacących (Pan Młody gratis 🤵)`, zl(full) + " / os", false));
+        sum.appendChild(rowKV("👉 Twoja cena", !mePays ? "0 zł 🎉" : zl(yourFull), true));
         const nowRow = rowKV(`Teraz wg zgłoszeń (${now.G}/${FULL.G} chętnych)`,
-          nowPrice ? zl(nowPrice) : "— brak zgłoszeń", false);
+          !mePays ? "0 zł" : (nowPrice ? zl(yourNow) : "— brak zgłoszeń"), false);
         nowRow.classList.add("now-row");
         sum.appendChild(nowRow);
         sum.appendChild(el(
           "div", "budget-badge " + (over ? "over" : "ok"),
-          over ? `⚠️ ${zl(full - BUDGET_TARGET)} ponad budżet`
-               : `✅ w budżecie • ${zl(BUDGET_TARGET - full)} zapasu`
+          !mePays ? "🎉 Pan Młody nie płaci — gratis!"
+                  : (over ? `⚠️ ${zl(yourFull - BUDGET_TARGET)} ponad budżet`
+                          : `✅ w budżecie • ${zl(BUDGET_TARGET - yourFull)} zapasu`)
         ));
         body.appendChild(sum);
       } else {
@@ -475,75 +488,40 @@
     }
   }
 
-  // ---------- Czat grupowy 💬 ----------
-  let chatMessages = [];
-
-  function timeStr(iso) {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-    } catch (e) { return ""; }
+  // ---------- Lightbox zdjęć ----------
+  function openLightbox(src, alt) {
+    const lb = $("#lightbox");
+    $("#lightboxImg").src = src;
+    $("#lightboxImg").alt = alt || "Podgląd";
+    lb.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+  function closeLightbox() {
+    $("#lightbox").hidden = true;
+    $("#lightboxImg").src = "";
+    if (whoami) document.body.style.overflow = "";
   }
 
-  function renderChat() {
-    const box = $("#chatMsgs");
-    const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-    box.innerHTML = "";
-    if (!chatMessages.length) {
-      box.appendChild(el("p", "chat-empty", "Jeszcze cisza… napisz pierwszy! 🍻"));
-    }
-    chatMessages.forEach((m) => {
-      const mine = m.name === whoami;
-      const row = el("div", "chat-msg" + (mine ? " mine" : ""));
-      if (!mine) row.appendChild(el("span", "chat-name", firstName(m.name || "?")));
-      const bubble = el("div", "chat-bubble");
-      bubble.appendChild(el("span", "chat-text", escapeHtml(m.text || "")));
-      bubble.appendChild(el("span", "chat-time", timeStr(m.created_at)));
-      row.appendChild(bubble);
-      box.appendChild(row);
+  // ---------- Pływający widget czatu ----------
+  function setupChatWidget() {
+    if (!window.KawalerskiChat) return;
+    KawalerskiChat.mount({ msgsEl: $("#cwMsgs"), formEl: $("#cwForm"), inputEl: $("#cwInput") });
+    const fab = $("#chatFab");
+    const widget = $("#chatWidget");
+    const badge = $("#chatBadge");
+    KawalerskiChat.setUnreadHandler((n) => {
+      badge.hidden = !n;
+      badge.textContent = n > 9 ? "9+" : String(n);
     });
-    if (nearBottom) box.scrollTop = box.scrollHeight;
-
-    // Stan inputa zależny od wyboru tożsamości
-    const input = $("#chatInput");
-    const ok = !!whoami;
-    input.disabled = !ok;
-    $("#chatSend").disabled = !ok;
-    input.placeholder = ok ? `Piszesz jako ${firstName(whoami)}…` : "Najpierw wybierz kim jesteś (na górze)";
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  }
-
-  async function loadChat() {
-    if (sb) {
-      const { data, error } = await sb
-        .from(CHAT_TABLE)
-        .select("name, text, created_at")
-        .order("created_at", { ascending: true })
-        .limit(300);
-      if (!error && data) chatMessages = data;
-    } else {
-      try { chatMessages = JSON.parse(localStorage.getItem("kawalerski_chat_local")) || []; }
-      catch (e) { chatMessages = []; }
-    }
-    renderChat();
-  }
-
-  async function sendChat(text) {
-    if (!whoami || !text.trim()) return;
-    const msg = { name: whoami, text: text.trim(), created_at: new Date().toISOString() };
-    if (sb) {
-      const { error } = await sb.from(CHAT_TABLE).insert({ name: msg.name, text: msg.text });
-      if (error) { alert("Nie udało się wysłać: " + error.message); return; }
-      await loadChat();
-    } else {
-      chatMessages.push(msg);
-      localStorage.setItem("kawalerski_chat_local", JSON.stringify(chatMessages));
-      renderChat();
-    }
+    const openW = () => {
+      widget.hidden = false; fab.classList.add("hidden");
+      KawalerskiChat.refresh();
+      KawalerskiChat.markSeen();
+      setTimeout(() => $("#cwInput") && $("#cwInput").focus(), 50);
+    };
+    const closeW = () => { widget.hidden = true; fab.classList.remove("hidden"); };
+    fab.onclick = openW;
+    $("#chatWidgetClose").onclick = closeW;
   }
 
   // ---------- Banner ----------
@@ -561,11 +539,7 @@
     sb.channel("votes-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, loadVotes)
       .subscribe();
-    sb.channel("chat-rt")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: CHAT_TABLE }, loadChat)
-      .subscribe();
     setInterval(loadVotes, 8000);
-    setInterval(loadChat, 8000);
   }
 
   // ---------- Init ----------
@@ -574,18 +548,14 @@
     $("#lbToggle").setAttribute("aria-expanded", counterOpen ? "true" : "false");
     renderCounter();
   };
-  $("#chatForm").onsubmit = (e) => {
-    e.preventDefault();
-    const input = $("#chatInput");
-    const text = input.value;
-    input.value = "";
-    sendChat(text);
-  };
+  $("#lightbox").onclick = closeLightbox;
+  $("#lightboxClose").onclick = closeLightbox;
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
+
   renderIdentity();
   renderBanner();
   renderCounter();
-  renderChat();
+  setupChatWidget();
   loadVotes();
-  loadChat();
   subscribe();
 })();

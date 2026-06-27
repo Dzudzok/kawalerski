@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0c13" />
+  <title>Czat grupowy 💬 — Kawalerski Dawida</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>" />
+</head>
+<body class="chat-page">
+  <header class="cp-head">
+    <a class="cp-back" href="index.html" aria-label="Wróć">←</a>
+    <span class="cp-title">💬 Czat grupowy</span>
+    <select id="cpWho" class="cp-who" aria-label="Kim jesteś"></select>
+  </header>
+
+  <div class="chat-msgs cp-msgs" id="cpMsgs"></div>
+
+  <form class="chat-form cp-form" id="cpForm">
+    <input id="cpInput" class="chat-input" type="text" maxlength="500"
+           placeholder="Napisz wiadomość…" autocomplete="off" />
+    <button class="chat-send" type="submit" aria-label="Wyślij">➤</button>
+  </form>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="data.js"></script>
+  <script src="chat.js"></script>
+  <script>
+    (function () {
+      var WHO_KEY = "kawalerski_whoami";
+      var sel = document.getElementById("cpWho");
+      var ph = document.createElement("option");
+      ph.value = ""; ph.textContent = "— kim jesteś? —";
+      sel.appendChild(ph);
+      PARTICIPANTS.forEach(function (p) {
+        var o = document.createElement("option");
+        o.value = p.name;
+        o.textContent = p.name + (p.tag ? " (" + p.tag + ")" : "");
+        sel.appendChild(o);
+      });
+      sel.value = localStorage.getItem(WHO_KEY) || "";
+      sel.onchange = function () {
+        localStorage.setItem(WHO_KEY, sel.value);
+        if (window.KawalerskiChat) KawalerskiChat.refresh();
+      };
+      if (window.KawalerskiChat) {
+        KawalerskiChat.mount({
+          msgsEl: document.getElementById("cpMsgs"),
+          formEl: document.getElementById("cpForm"),
+          inputEl: document.getElementById("cpInput"),
+        });
+        KawalerskiChat.markSeen();
+      }
+    })();
+  </script>
+</body>
+</html>

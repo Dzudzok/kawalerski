@@ -156,8 +156,20 @@ main { max-width: 760px; margin: 0 auto; padding: 22px 14px 56px; }
 #whoamiNote { margin: 12px 0 0; font-weight: 500; }
 
 /* OPTION */
-.option { padding: 0; overflow: hidden; transition: transform .2s ease, box-shadow .2s ease; }
+.option { position: relative; padding: 0; overflow: hidden; transition: transform .2s ease, box-shadow .2s ease; }
 .option.chosen { border-color: rgba(45, 212, 191, 0.55); box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.4), 0 16px 40px rgba(45, 212, 191, 0.12); }
+.option.favorite { border-color: rgba(255, 200, 60, 0.6); box-shadow: 0 0 0 1px rgba(255, 200, 60, 0.45), 0 16px 44px rgba(255, 170, 40, 0.18); }
+.fav-ribbon {
+  position: absolute; top: 13px; right: -34px; z-index: 3;
+  transform: rotate(45deg); background: linear-gradient(135deg, #ffd24d, #ff9d2e);
+  color: #3a2400; font-weight: 800; font-size: 11px; letter-spacing: .04em;
+  padding: 5px 40px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.opt-warning {
+  margin-top: 14px; font-size: 13px; font-weight: 600; color: #ffd9a0;
+  background: rgba(255, 170, 40, 0.12); border: 1px solid rgba(255, 170, 40, 0.4);
+  border-radius: 12px; padding: 10px 13px; line-height: 1.4;
+}
 .option:not(.collapsed) { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); }
 
 .opt-head {
@@ -198,11 +210,28 @@ main { max-width: 760px; margin: 0 auto; padding: 22px 14px 56px; }
 
 /* GALLERY */
 .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+.gal-item { padding: 0; border: none; background: none; cursor: zoom-in; border-radius: 14px; }
 .gallery img {
   width: 100%; height: 112px; object-fit: cover; border-radius: 14px;
   border: 1px solid var(--line); display: block; transition: transform .25s ease;
 }
-.gallery a:active img { transform: scale(.97); }
+.gal-item:active img { transform: scale(.97); }
+
+/* LIGHTBOX */
+.lightbox {
+  position: fixed; inset: 0; z-index: 300; display: flex;
+  align-items: center; justify-content: center; padding: 20px;
+  background: rgba(5, 6, 10, 0.92); backdrop-filter: blur(6px); cursor: zoom-out;
+  animation: fadein .2s ease;
+}
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+.lightbox[hidden] { display: none; }
+.lightbox img { max-width: 100%; max-height: 86vh; border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+.lightbox-close {
+  position: absolute; top: max(16px, env(safe-area-inset-top)); right: 18px;
+  width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(255,255,255,.14); color: #fff; font-size: 20px; backdrop-filter: blur(6px);
+}
 
 /* FLIGHTS */
 .flights { display: grid; gap: 8px; margin: 16px 0; }
@@ -362,6 +391,67 @@ main { max-width: 760px; margin: 0 auto; padding: 22px 14px 56px; }
 }
 .chat-send:active { transform: scale(.95); }
 .chat-send:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+
+/* Link do pełnego czatu */
+.chat-page-link {
+  display: block; text-align: center; text-decoration: none; color: var(--text);
+  font-weight: 600; font-size: 15px;
+}
+.chat-page-link:active { border-color: var(--accent); }
+
+/* PŁYWAJĄCY WIDGET CZATU */
+.fab {
+  position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 120;
+  width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--grad-hot); color: #fff; box-shadow: 0 10px 28px rgba(255, 77, 141, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .15s ease, opacity .15s ease;
+}
+.fab:active { transform: scale(.92); }
+.fab.hidden { transform: scale(0); opacity: 0; pointer-events: none; }
+.fab-icon { font-size: 26px; }
+.fab-badge {
+  position: absolute; top: -2px; right: -2px; min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: 999px; background: var(--teal); color: #04140d; font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg);
+}
+.chat-widget {
+  position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 130;
+  width: min(380px, calc(100vw - 32px)); height: min(560px, calc(100vh - 90px));
+  display: flex; flex-direction: column; overflow: hidden;
+  background: rgba(16, 19, 30, 0.96); backdrop-filter: blur(16px);
+  border: 1px solid var(--line-strong); border-radius: 22px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  animation: gatein .25s ease;
+}
+.chat-widget[hidden] { display: none; }
+.cw-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--line); font-weight: 700;
+}
+.cw-head-actions { display: flex; align-items: center; gap: 6px; }
+.cw-expand, .cw-close {
+  width: 34px; height: 34px; border-radius: 10px; border: none; cursor: pointer;
+  background: var(--glass-2); color: var(--text); font-size: 16px; text-decoration: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.chat-widget .chat-msgs { flex: 1; max-height: none; padding: 12px 14px; }
+.chat-widget .chat-form { padding: 12px 14px; border-top: 1px solid var(--line); margin: 0; }
+
+/* PODSTRONA CZATU */
+.chat-page { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+.cp-head {
+  display: flex; align-items: center; gap: 12px; padding: max(14px, env(safe-area-inset-top)) 16px 14px;
+  border-bottom: 1px solid var(--line); background: rgba(10, 12, 19, 0.8); backdrop-filter: blur(12px);
+}
+.cp-back { text-decoration: none; color: var(--text); font-size: 24px; line-height: 1; }
+.cp-title { font-weight: 700; font-size: 17px; }
+.cp-who {
+  margin-left: auto; max-width: 46%; padding: 9px 12px; font-size: 14px;
+  background: var(--glass-2); color: var(--text); border: 1px solid var(--line-strong); border-radius: 12px;
+  appearance: none;
+}
+.cp-msgs { flex: 1; max-height: none; padding: 16px; }
+.cp-form { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); margin: 0; }
 
 .config-banner {
   background: rgba(255, 138, 61, 0.1); border: 1px solid rgba(255, 138, 61, 0.4);

@@ -240,12 +240,19 @@
       // --- Głosowanie ---
       const voteWrap = el("div", "vote");
       const voted = myVote === opt.id;
-      const btn = el("button", "vote-btn" + (voted ? " active" : ""),
-        voted ? "✅ To Twój wybór" : "🗳️ Głosuj na tę opcję");
-      btn.disabled = !whoami;
+      const votedOther = myVote && myVote !== opt.id;
+      let label, cls;
+      if (voted) { label = "✅ Twój wybór"; cls = " active"; }
+      else if (votedOther) { label = "🔁 Zmień głos na tę opcję"; cls = " change"; }
+      else { label = "🗳️ Głosuj na tę opcję"; cls = ""; }
+      const btn = el("button", "vote-btn" + cls, label);
+      btn.disabled = !whoami || voted;
       btn.title = whoami ? "" : "Najpierw wybierz kim jesteś (na górze)";
-      btn.onclick = () => castVote(opt.id);
+      btn.onclick = (e) => castVote(opt.id, e);
       voteWrap.appendChild(btn);
+      if (whoami && voted) {
+        voteWrap.appendChild(el("p", "vote-hint", "Możesz zmienić wybór klikając inną opcję — w każdej chwili."));
+      }
       body.appendChild(voteWrap);
 
       card.appendChild(body);
@@ -266,10 +273,30 @@
     return r;
   }
 
+  // ---------- Konfetti 🎉 ----------
+  function popConfetti(x, y) {
+    const emojis = ["🍺", "🎉", "🥳", "🔥", "✈️", "🏖️", "🍻"];
+    for (let i = 0; i < 18; i++) {
+      const s = el("span", "confetti", emojis[Math.floor(Math.random() * emojis.length)]);
+      const ang = (Math.random() - 0.5) * 2; // -1..1
+      s.style.left = x + "px";
+      s.style.top = y + "px";
+      s.style.setProperty("--dx", (ang * 220).toFixed(0) + "px");
+      s.style.setProperty("--dy", (-160 - Math.random() * 160).toFixed(0) + "px");
+      s.style.setProperty("--rot", (Math.random() * 720 - 360).toFixed(0) + "deg");
+      s.style.fontSize = 14 + Math.random() * 16 + "px";
+      s.style.animationDelay = (Math.random() * 0.08).toFixed(2) + "s";
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 1300);
+    }
+  }
+
   // ---------- Głosowanie ----------
-  async function castVote(optionId) {
+  async function castVote(optionId, ev) {
     if (!whoami) return;
+    const changed = currentVotes[whoami] !== optionId;
     currentVotes[whoami] = optionId; // optimistic
+    if (changed && ev && ev.clientX) popConfetti(ev.clientX, ev.clientY);
     renderOptions();
     renderResults();
     renderCounter();

@@ -465,7 +465,7 @@
     OPTIONS.forEach((o) => {
       const c = counts[o.id].length;
       const chip = el("span", "lb-chip" + (c === leadCount && leadCount > 0 ? " lead" : ""));
-      chip.innerHTML = `${o.emoji || "📍"} <b>${c}</b>`;
+      chip.innerHTML = `${o.emoji || "📍"} <span class="lb-chip-name">${o.title}</span> <b>${c}</b>`;
       chip.title = o.title;
       chips.appendChild(chip);
     });

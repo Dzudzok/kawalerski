@@ -2,35 +2,48 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0e1116" />
   <title>Kawalerski Dawida 🍺 — głosowanie</title>
   <meta name="description" content="Wybór miejsca na kawalerski — 3 opcje, koszty, głosowanie." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://cf.bstatic.com" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍺</text></svg>" />
 </head>
 <body>
   <header class="hero">
     <div class="hero-inner">
-      <p class="kicker">Kawalerski • Pan Młody: Dawid Gajdosz</p>
-      <h1>Wybieramy wyjazd 🍻</h1>
-      <p class="subtitle">3 opcje, pełne koszty, głosujesz — <strong>większość wygrywa</strong>.</p>
-      <div class="budget-pill" id="budgetPill">Budżet docelowy: <strong>2000 zł / os</strong></div>
+      <p class="kicker">Kawalerski • Pan Młody: Dawid Gajdosz 🤵</p>
+      <h1>Dokąd jedziemy? 🍻</h1>
+      <p class="subtitle">3 opcje • pełne koszty na osobę • głosujesz z telefonu</p>
+      <div class="pills">
+        <span class="pill">👥 11 osób</span>
+        <span class="pill">🎯 budżet 2000 zł / os</span>
+        <span class="pill">🏆 większość wygrywa</span>
+      </div>
     </div>
   </header>
 
   <main>
     <section class="identity card" id="identityCard">
-      <h2>1. Kim jesteś?</h2>
-      <p class="muted">Wybierz siebie z listy — Twój głos zapisze się pod tym imieniem (możesz zmienić zdanie później).</p>
-      <select id="whoami" class="who-select"></select>
+      <h2>① Kim jesteś?</h2>
+      <p class="muted">Wybierz siebie — głos zapisze się pod Twoim imieniem (możesz zmienić zdanie później).</p>
+      <select id="whoami" class="who-select" aria-label="Wybierz kim jesteś"></select>
       <p class="muted small" id="whoamiNote"></p>
     </section>
 
+    <div class="section-title"><h2>② Wybierz wyjazd</h2><span class="muted small">kliknij „Głosuj" na swojej opcji</span></div>
     <section id="options" class="options"></section>
 
+    <details class="card explainer">
+      <summary>💡 Dlaczego „Twoja cena" jest wyższa niż suma pozycji?</summary>
+      <p>Pan Młody (Dawid) nie płaci. Jego część kosztów dzieli się równo na pozostałych
+      <strong>10 płacących</strong>. Dlatego Twoja realna cena = suma bazowa × 11/10.
+      Każda pozycja w rozbiciu kosztów to kwota przypadająca na 1 osobę.</p>
+    </details>
+
     <section class="results card" id="resultsCard">
-      <h2>📊 Wyniki na żywo</h2>
+      <h2>③ 📊 Wyniki na żywo</h2>
       <p class="muted" id="resultsSummary">Ładowanie głosów…</p>
       <div id="resultsBars"></div>
     </section>
@@ -39,7 +52,7 @@
   </main>
 
   <footer>
-    <p>Organizuje: Mateusz Durczok (świadek) • Zrobione na kolanie, ale z sercem ❤️</p>
+    <p>Organizuje: <strong>Mateusz Durczok</strong> (świadek) • robione z sercem ❤️</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

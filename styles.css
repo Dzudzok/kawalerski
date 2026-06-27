@@ -160,10 +160,10 @@ main { max-width: 760px; margin: 0 auto; padding: 22px 14px 56px; }
 .option.chosen { border-color: rgba(45, 212, 191, 0.55); box-shadow: 0 0 0 1px rgba(45, 212, 191, 0.4), 0 16px 40px rgba(45, 212, 191, 0.12); }
 .option.favorite { border-color: rgba(255, 200, 60, 0.6); box-shadow: 0 0 0 1px rgba(255, 200, 60, 0.45), 0 16px 44px rgba(255, 170, 40, 0.18); }
 .fav-ribbon {
-  position: absolute; top: 13px; right: -34px; z-index: 3;
-  transform: rotate(45deg); background: linear-gradient(135deg, #ffd24d, #ff9d2e);
-  color: #3a2400; font-weight: 800; font-size: 11px; letter-spacing: .04em;
-  padding: 5px 40px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  display: block; text-align: center;
+  background: linear-gradient(135deg, #ffd24d, #ff9d2e);
+  color: #3a2400; font-weight: 800; font-size: 12px; letter-spacing: .1em;
+  padding: 6px 10px;
 }
 .opt-warning {
   margin-top: 14px; font-size: 13px; font-weight: 600; color: #ffd9a0;

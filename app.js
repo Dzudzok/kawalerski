@@ -138,7 +138,7 @@
       const card = el("article",
         "card option" + (opt.favorite ? " favorite" : "") +
         (myVote === opt.id ? " chosen" : "") + (isOpen ? "" : " collapsed"));
-      if (opt.favorite) card.appendChild(el("div", "fav-ribbon", "⭐ FAWORYT"));
+      if (opt.favorite) card.appendChild(el("div", "fav-ribbon", "⭐ FAWORYT EKIPY"));
 
       // --- Summary (zawsze widoczne, klikalne) ---
       const head = el("button", "opt-head");
@@ -364,6 +364,7 @@
     renderOptions();
     renderResults();
     renderCounter();
+    lastVotesJSON = JSON.stringify(currentVotes); // unikaj podwójnego renderu po zapisie
 
     if (sb) {
       const { error } = await sb
@@ -376,6 +377,7 @@
     }
   }
 
+  let lastVotesJSON = null;
   async function loadVotes() {
     if (sb) {
       const { data, error } = await sb.from(TABLE).select("name, option_id");
@@ -387,6 +389,10 @@
       try { currentVotes = JSON.parse(localStorage.getItem("kawalerski_votes_local")) || {}; }
       catch (e) { currentVotes = {}; }
     }
+    // Przerysuj tylko gdy głosy faktycznie się zmieniły (inaczej mapy migają co poll)
+    const json = JSON.stringify(currentVotes);
+    if (json === lastVotesJSON) return;
+    lastVotesJSON = json;
     renderOptions();
     renderResults();
     renderCounter();

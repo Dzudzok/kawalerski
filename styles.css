@@ -29,15 +29,34 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
   overflow-x: hidden;
 }
-/* Animowane tło — sunset nad Adriatykiem */
+/* Animowane tło — sunset nad Adriatykiem (nad filmem) */
 body::before {
   content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(900px 500px at 15% -10%, rgba(255, 77, 141, 0.22), transparent 60%),
-    radial-gradient(900px 600px at 90% 0%, rgba(255, 138, 61, 0.20), transparent 55%),
-    radial-gradient(800px 700px at 50% 110%, rgba(45, 212, 191, 0.16), transparent 55%);
+    radial-gradient(900px 500px at 15% -10%, rgba(255, 77, 141, 0.18), transparent 60%),
+    radial-gradient(900px 600px at 90% 0%, rgba(255, 138, 61, 0.16), transparent 55%),
+    radial-gradient(800px 700px at 50% 110%, rgba(45, 212, 191, 0.14), transparent 55%);
   animation: floatbg 16s ease-in-out infinite alternate;
 }
+
+/* TŁO: film z YouTube */
+#bgVideo {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 100vw; height: 56.25vw; min-height: 100vh; min-width: 177.78vh;
+  z-index: -3; pointer-events: none; border: 0;
+}
+.bg-overlay {
+  position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background: linear-gradient(rgba(10, 12, 19, 0.58), rgba(10, 12, 19, 0.72));
+}
+.sound-toggle {
+  position: fixed; top: max(14px, env(safe-area-inset-top)); left: 14px; z-index: 140;
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--line-strong); background: rgba(16, 19, 30, 0.8); backdrop-filter: blur(8px);
+  color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); transition: transform .1s ease;
+}
+.sound-toggle:active { transform: scale(.92); }
 @keyframes floatbg {
   from { transform: translate3d(0, 0, 0) scale(1); }
   to   { transform: translate3d(0, -18px, 0) scale(1.05); }

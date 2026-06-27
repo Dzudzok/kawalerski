@@ -199,7 +199,8 @@
       // --- Linki ---
       if (opt.bookingLink) {
         const links = el("div", "links");
-        const a = el("a", "btn-link", "🔗 Zobacz ofertę na Booking");
+        const a = el("a", "btn-booking",
+          '<span class="bk-logo">Booking.com</span><span class="bk-text">Zobacz pełną ofertę i zdjęcia →</span>');
         a.href = opt.bookingLink; a.target = "_blank"; a.rel = "noopener";
         links.appendChild(a);
         card.appendChild(links);

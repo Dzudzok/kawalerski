@@ -355,12 +355,50 @@
     }
   }
 
+  // ---------- Toast 🍻 ----------
+  const VOTE_HYPE = [
+    "🔥 Świetny wybór!", "🍻 Lecimy z tym!", "💪 Dobra decyzja!",
+    "🎉 Zapisane!", "✈️ Pakuj walizkę!", "😎 Mocny ruch!", "🤙 Zanotowane!",
+  ];
+  function showToast(msg) {
+    const t = el("div", "toast", msg);
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("show"));
+    setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 320); }, 1800);
+  }
+
+  // ---------- Rotujące hasła w hero ----------
+  function startHype() {
+    const lines = [
+      "Co się dzieje na wyjeździe, zostaje na grupie 🤐",
+      "Budżet 2000 zł… chyba że ktoś weźmie pożyczkę u Drąszcza 💸",
+      "Pan Młody nie płaci — reszta płacze 😅",
+      "Głosuj mądrze, kac będzie wspólny 🍻",
+      "Ostatni wolny weekend Dawida 🫡",
+      "Zero zdjęć dla narzeczonej 📵",
+      "Większość wygrywa, marudy płaczą w Uberze 🚕",
+    ];
+    const h = $("#hype");
+    if (!h) return;
+    let i = Math.floor(Math.random() * lines.length);
+    const tick = () => { h.textContent = lines[i % lines.length]; i++; };
+    tick();
+    h.classList.add("show");
+    setInterval(() => {
+      h.classList.remove("show");
+      setTimeout(() => { tick(); h.classList.add("show"); }, 320);
+    }, 4500);
+  }
+
   // ---------- Głosowanie ----------
   async function castVote(optionId, ev) {
     if (!whoami) return;
     const changed = currentVotes[whoami] !== optionId;
     currentVotes[whoami] = optionId; // optimistic
-    if (changed && ev && ev.clientX) popConfetti(ev.clientX, ev.clientY);
+    if (changed && ev && ev.clientX) {
+      popConfetti(ev.clientX, ev.clientY);
+      showToast(VOTE_HYPE[Math.floor(Math.random() * VOTE_HYPE.length)]);
+    }
     renderOptions();
     renderResults();
     renderCounter();
@@ -557,6 +595,22 @@
   $("#lightbox").onclick = closeLightbox;
   $("#lightboxClose").onclick = closeLightbox;
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
+
+  // Żartobliwy widget pożyczki u Drąszcza 💸
+  const loanBtn = $("#loanBtn");
+  if (loanBtn) {
+    loanBtn.onclick = (e) => {
+      const r = $("#loanReveal");
+      const opening = r.hidden;
+      r.hidden = !opening;
+      loanBtn.textContent = opening ? "🙈 Schowaj numer" : "💰 Chcę pożyczyć kasę";
+      if (opening && e && e.clientX) {
+        popConfetti(e.clientX, e.clientY);
+        showToast("🤑 Drąszcz już liczy odsetki…");
+      }
+    };
+  }
+  startHype();
 
   renderIdentity();
   renderBanner();

@@ -757,3 +757,56 @@ html { scroll-behavior: smooth; }
 .pack-item input { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
 .pack-item.checked { opacity: .55; }
 .pack-item.checked span { text-decoration: line-through; }
+
+/* ====== ANIMACJE / „KOZAK" ====== */
+/* Migoczący tytuł */
+.hero h1 {
+  background: linear-gradient(100deg, #fff 0%, #ffd9c2 28%, #ff9ec4 50%, #ffd9c2 72%, #fff 100%);
+  background-size: 220% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+/* Unoszące się emoji */
+.floaties { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.floaty { position: absolute; bottom: -8vh; opacity: 0; will-change: transform, opacity; }
+
+/* Karty — lekki lift */
+.card { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero h1 { animation: heroSheen 7s ease-in-out infinite; }
+  @keyframes heroSheen { 0%, 100% { background-position: 0% center; } 50% { background-position: 100% center; } }
+
+  .floaty { animation-name: floatUp; animation-timing-function: linear; animation-iteration-count: infinite; }
+  @keyframes floatUp {
+    0% { transform: translateY(0) rotate(0); opacity: 0; }
+    8% { opacity: .16; } 92% { opacity: .16; }
+    100% { transform: translateY(-120vh) rotate(45deg); opacity: 0; }
+  }
+
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity .6s cubic-bezier(.2,.8,.2,1), transform .6s cubic-bezier(.2,.8,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  @media (hover: hover) {
+    .card:hover { transform: translateY(-3px); border-color: var(--line-strong); box-shadow: 0 22px 52px rgba(0,0,0,.52); }
+  }
+
+  .gate-emoji { animation: bob 2.6s ease-in-out infinite; }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+  .cd-item.warn b { animation: pulseWarn 1.6s ease-in-out infinite; }
+  @keyframes pulseWarn { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+  .seg.part .seg-fill::after, .seg.done .seg-fill::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent);
+    transform: translateX(-120%); animation: segSheen 2.6s ease-in-out infinite;
+  }
+  @keyframes segSheen { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(220%); } }
+
+  .vote-btn, .chat-send { position: relative; overflow: hidden; }
+  .vote-btn::after, .chat-send::after {
+    content: ""; position: absolute; top: 0; left: 0; width: 40%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+    transform: translateX(-160%); animation: btnSheen 4.5s ease-in-out infinite;
+  }
+  @keyframes btnSheen { 0% { transform: translateX(-160%); } 45%, 100% { transform: translateX(360%); } }
+}

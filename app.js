@@ -321,7 +321,7 @@
   }
 
   // ---------- Odliczanie ----------
-  function renderCountdown() {
+  function renderCountdown(animate) {
     const box = $("#countdown");
     if (!box) return;
     const now = new Date();
@@ -329,8 +329,9 @@
     const dDep = days(KEY_DATES.departure);
     const dPay = days(KEY_DATES.payDeadline);
     box.innerHTML =
-      `<div class="cd-item"><b>${dDep}</b><span>dni do wylotu ✈️</span></div>` +
-      `<div class="cd-item ${dPay <= 7 ? "warn" : ""}"><b>${dPay}</b><span>dni do dopłaty (15.07)</span></div>`;
+      `<div class="cd-item"><b data-n="${dDep}">${animate ? 0 : dDep}</b><span>dni do wylotu ✈️</span></div>` +
+      `<div class="cd-item ${dPay <= 7 ? "warn" : ""}"><b data-n="${dPay}">${animate ? 0 : dPay}</b><span>dni do dopłaty (15.07)</span></div>`;
+    if (animate) box.querySelectorAll("b[data-n]").forEach((b) => countUp(b, +b.getAttribute("data-n"), 900));
   }
 
   // ---------- Plan ----------
@@ -496,6 +497,47 @@
     setInterval(() => { h.classList.remove("show"); setTimeout(() => { tick(); h.classList.add("show"); }, 320); }, 4500);
   }
 
+  // ---------- Animacje 🎬 ----------
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function countUp(node, to, dur) {
+    if (reduceMotion) { node.textContent = Math.round(to); return; }
+    const start = performance.now();
+    (function step(t) {
+      const p = Math.min(1, (t - start) / dur);
+      const e = 1 - Math.pow(1 - p, 3);
+      node.textContent = Math.round(to * e);
+      if (p < 1) requestAnimationFrame(step);
+    })(start);
+  }
+
+  function setupReveal() {
+    if (reduceMotion || !("IntersectionObserver" in window)) return;
+    const els = document.querySelectorAll(".card, .section-title");
+    els.forEach((el) => el.classList.add("reveal"));
+    const obs = new IntersectionObserver((entries, o) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) { en.target.classList.add("in"); o.unobserve(en.target); }
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.06 });
+    els.forEach((el) => obs.observe(el));
+  }
+
+  function spawnFloaties() {
+    if (reduceMotion) return;
+    const box = $("#floaties");
+    if (!box) return;
+    const emojis = ["🍺", "✈️", "🌴", "🍾", "🕶️", "🏖️", "🍹"];
+    for (let i = 0; i < 9; i++) {
+      const s = el("span", "floaty", emojis[i % emojis.length]);
+      s.style.left = (Math.random() * 100).toFixed(1) + "%";
+      s.style.animationDuration = (16 + Math.random() * 16).toFixed(1) + "s";
+      s.style.animationDelay = (-Math.random() * 20).toFixed(1) + "s";
+      s.style.fontSize = (18 + Math.random() * 20).toFixed(0) + "px";
+      box.appendChild(s);
+    }
+  }
+
   // ---------- Init ----------
   $("#heroTitle").innerHTML = `${TRIP.title} ${TRIP.country.split(" ").pop()}`;
   $("#heroDates").textContent = TRIP.datesLong;
@@ -504,8 +546,8 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
 
   renderIdentity();
-  renderCountdown();
-  setInterval(renderCountdown, 60000);
+  renderCountdown(true);
+  setInterval(() => renderCountdown(false), 60000);
   renderPayments();
   renderPayInfo();
   renderFlight();
@@ -516,6 +558,8 @@
   renderContact();
   setupChatWidget();
   setupNav();
+  setupReveal();
+  spawnFloaties();
   startHype();
   loadPayments();
   subscribePayments();

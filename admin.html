@@ -22,8 +22,8 @@
     <section class="card" id="pinCard">
       <h2>Podaj PIN</h2>
       <p class="muted small">Panel do ustawiania kto ile wpłacił. Zmiany widzą wszyscy na stronie.</p>
-      <input id="pin" class="chat-input" type="password" inputmode="numeric" placeholder="PIN" style="margin-top:12px;width:100%" />
-      <button class="vote-btn" id="pinBtn" style="margin-top:12px">Wejdź</button>
+      <input id="pin" class="chat-input" type="password" inputmode="numeric" placeholder="PIN (1267)" style="margin-top:12px;width:100%" />
+      <button class="vote-btn" id="pinBtn" type="button" onclick="window.__tryPin&&window.__tryPin()" style="margin-top:12px">Wejdź</button>
       <p class="muted small" id="pinMsg"></p>
     </section>
 
@@ -71,21 +71,34 @@
       var round2 = function (n) { return Math.round(n * 100) / 100; };
 
       // ---- LOGOWANIE (wire od razu, niezależnie od reszty) ----
-      function unlocked() { return localStorage.getItem("kawalerski_admin_ok") === "1"; }
+      function unlocked() {
+        try { return localStorage.getItem("kawalerski_admin_ok") === "1"; } catch (e) { return false; }
+      }
       function tryPin() {
         var val = ($("#pin").value || "").trim();
         if (val === ADMIN_PIN) {
-          localStorage.setItem("kawalerski_admin_ok", "1");
+          try { localStorage.setItem("kawalerski_admin_ok", "1"); } catch (e) {}
           $("#pinMsg").textContent = "";
           openPanel();
         } else {
-          $("#pinMsg").textContent = "Zły PIN. Spróbuj ponownie.";
+          $("#pinMsg").textContent = "Zły PIN. Spróbuj ponownie. (PIN: 1267)";
         }
       }
-      $("#pinBtn").addEventListener("click", function (e) { e.preventDefault(); tryPin(); });
-      $("#pin").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); tryPin(); } });
+      window.__tryPin = tryPin; // fallback dla inline onclick
+      var pinBtn = $("#pinBtn"), pinInput = $("#pin");
+      if (pinBtn) pinBtn.addEventListener("click", function (e) { e.preventDefault(); tryPin(); });
+      if (pinInput) pinInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); tryPin(); } });
 
       function openPanel() {
+        try {
+          _openPanel();
+        } catch (e) {
+          // nawet gdy coś padnie — pokaż panel
+          $("#pinCard").hidden = true;
+          $("#panel").hidden = false;
+        }
+      }
+      function _openPanel() {
         $("#pinCard").hidden = true;
         $("#panel").hidden = false;
         $("#adminTotals").innerHTML =

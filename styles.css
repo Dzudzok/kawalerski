@@ -804,9 +804,10 @@ html { scroll-behavior: smooth; }
 
   .vote-btn, .chat-send { position: relative; overflow: hidden; }
   .vote-btn::after, .chat-send::after {
-    content: ""; position: absolute; top: 0; left: 0; width: 40%; height: 100%;
+    content: ""; position: absolute; top: 0; left: 0; width: 40%; height: 100%; pointer-events: none;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
     transform: translateX(-160%); animation: btnSheen 4.5s ease-in-out infinite;
   }
+  .seg-fill::after { pointer-events: none; }
   @keyframes btnSheen { 0% { transform: translateX(-160%); } 45%, 100% { transform: translateX(360%); } }
 }

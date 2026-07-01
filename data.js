@@ -15,7 +15,7 @@ const TRIP = {
    paid = wpłacona zaliczka w zł. */
 const PARTICIPANTS = [
   { name: "Dawid Gajdosz",    pays: false, tag: "Pan Młody 🤵", paid: 0 },
-  { name: "Mateusz Durczok",  pays: true,  tag: "świadek / organizator", paid: 1050 },
+  { name: "Mateusz Durczok",  pays: true,  tag: "świadek / organizator", paid: 1108.25 },
   { name: "Adam Jeleń",       pays: true,  paid: 1050 },
   { name: "Kamil Zerzoń",     pays: true,  paid: 1050 },
   { name: "Krzysztof Ziętek", pays: true,  paid: 1050 },

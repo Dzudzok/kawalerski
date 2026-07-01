@@ -32,6 +32,14 @@ const COSTS = {
   minibusEUR: 230,          // prywatny minibus dla ekipy (lotnisko ⇄ domek)
 };
 
+/* Gdzie wpłacać */
+const PAY_INFO = {
+  blikPhone: "531 025 216",              // BLIK na telefon
+  account: "27 1050 1403 1000 0092 0588 1544",
+  bank: "ING",
+  recipient: "Mateusz Durczok (organizator)",
+};
+
 /* Płatności / terminy do wyróżnienia */
 const PAYMENTS = {
   apartmentPaid: 3414,          // zapłacone za domek "dziś"

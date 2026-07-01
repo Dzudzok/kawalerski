@@ -673,3 +673,23 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 28px
 .pbar-wrap { margin-top: 14px; }
 .pbar-scale { display: flex; justify-content: space-between; margin-top: 7px; font-size: 10.5px; color: var(--muted); gap: 6px; }
 .pbar-scale span { white-space: nowrap; }
+
+/* ====== GDZIE WPŁACAĆ ====== */
+.payinfo-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.pi-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pi-label { color: var(--muted); font-size: 12px; }
+.pi-val { font-family: "Space Grotesk", sans-serif; font-size: 17px; font-weight: 700; letter-spacing: .02em; word-break: break-all; }
+.pi-copy { flex-shrink: 0; border: 1px solid var(--line-strong); background: var(--glass-2); color: var(--text); border-radius: 10px; padding: 9px 13px; font-size: 13px; cursor: pointer; font-weight: 600; }
+.pi-copy:active { transform: scale(.96); }
+
+/* ====== PANEL ADMIN ====== */
+.adm-row { display: grid; gap: 8px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.adm-row:last-child { border-bottom: none; }
+.adm-name { font-weight: 600; }
+.adm-input { width: 100%; padding: 12px 14px; font-size: 16px; background: var(--glass-2); color: var(--text); border: 1px solid var(--line-strong); border-radius: 12px; }
+.adm-input:focus { outline: none; border-color: var(--accent); }
+.adm-quick { display: flex; gap: 6px; }
+.adm-quick button { flex: 1; border: 1px solid var(--line); background: var(--glass-2); color: var(--text); border-radius: 10px; padding: 9px; font-size: 12.5px; cursor: pointer; font-weight: 600; }
+.adm-quick button:active { transform: scale(.97); }
+.admin-link { color: var(--muted); font-size: 12px; text-decoration: none; }
+.admin-link:active { color: var(--accent); }

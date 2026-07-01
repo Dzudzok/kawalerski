@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0c13" />
+  <title>Panel wpłat 🔒 — Kawalerski</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔒</text></svg>" />
+</head>
+<body>
+  <header class="cp-head">
+    <a class="cp-back" href="index.html" aria-label="Wróć">←</a>
+    <span class="cp-title">🔒 Panel wpłat</span>
+  </header>
+
+  <main>
+    <!-- PIN -->
+    <section class="card" id="pinCard">
+      <h2>Podaj PIN</h2>
+      <p class="muted small">Panel do ustawiania kto ile wpłacił. Zmiany widzą wszyscy na stronie.</p>
+      <input id="pin" class="chat-input" type="password" inputmode="numeric" placeholder="PIN" style="margin-top:12px;width:100%" />
+      <button class="vote-btn" id="pinBtn" style="margin-top:12px">Wejdź</button>
+      <p class="muted small" id="pinMsg"></p>
+    </section>
+
+    <!-- Panel -->
+    <section id="panel" hidden>
+      <div class="card">
+        <div id="adminTotals" class="pay-totals"></div>
+        <p class="muted small" id="adminHint"></p>
+      </div>
+      <div class="card">
+        <div id="rows"></div>
+        <button class="vote-btn" id="saveBtn" style="margin-top:16px">💾 Zapisz wszystko</button>
+        <p class="muted small" id="saveMsg"></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="data.js"></script>
+  <script>
+    (function () {
+      // ===== USTAW SWÓJ PIN =====
+      var ADMIN_PIN = "1267";
+
+      var cfgOk = window.SUPABASE_URL && !String(window.SUPABASE_URL).startsWith("WKLEJ");
+      var sb = cfgOk ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY) : null;
+      var TABLE = "kawalerski_payments";
+
+      var payers = PARTICIPANTS.filter(function (p) { return p.pays; });
+      var N = payers.length;
+      var minibusZl = COSTS.minibusEUR * TRIP.eurRate;
+      var zaliczka = (COSTS.flightTotal + PAYMENTS.apartmentPaid) / N;
+      var perPayer = (COSTS.flightTotal + COSTS.apartmentTotal + minibusZl) / N;
+      var zl = function (n) { return Number(n).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " zł"; };
+      var round2 = function (n) { return Math.round(n * 100) / 100; };
+
+      var $ = function (s) { return document.querySelector(s); };
+
+      // PIN gate (persist w localStorage)
+      function unlocked() { return localStorage.getItem("kawalerski_admin_ok") === "1"; }
+      function tryPin() {
+        if ($("#pin").value === ADMIN_PIN) {
+          localStorage.setItem("kawalerski_admin_ok", "1");
+          openPanel();
+        } else {
+          $("#pinMsg").textContent = "Zły PIN.";
+        }
+      }
+      $("#pinBtn").onclick = tryPin;
+      $("#pin").addEventListener("keydown", function (e) { if (e.key === "Enter") tryPin(); });
+
+      function openPanel() {
+        $("#pinCard").hidden = true;
+        $("#panel").hidden = false;
+        $("#adminTotals").innerHTML =
+          '<div class="pt-card"><span>Zaliczka / os</span><b>' + zl(zaliczka) + '</b><small>teraz</small></div>' +
+          '<div class="pt-card"><span>Całość / os</span><b>' + zl(perPayer) + '</b><small>do 30.07</small></div>' +
+          '<div class="pt-card"><span>Osób płacących</span><b>' + N + '</b><small></small></div>';
+        $("#adminHint").innerHTML = "Wpisz kwoty lub użyj skrótów. „Zaliczka" = " + zl(round2(zaliczka)) + ", „Całość" = " + zl(round2(perPayer)) + ".";
+        buildRows();
+      }
+
+      function buildRows() {
+        var box = $("#rows");
+        box.innerHTML = "";
+        payers.forEach(function (p, i) {
+          var row = document.createElement("div");
+          row.className = "adm-row";
+          row.innerHTML =
+            '<div class="adm-name">' + p.name + '</div>' +
+            '<input class="adm-input" type="number" step="0.01" inputmode="decimal" data-name="' + p.name + '" value="' + (p.paid || 0) + '" />' +
+            '<div class="adm-quick">' +
+              '<button type="button" data-set="' + round2(zaliczka) + '">Zaliczka</button>' +
+              '<button type="button" data-set="' + round2(perPayer) + '">Całość</button>' +
+              '<button type="button" data-set="0">0</button>' +
+            '</div>';
+          var input = row.querySelector(".adm-input");
+          row.querySelectorAll(".adm-quick button").forEach(function (b) {
+            b.onclick = function () { input.value = b.getAttribute("data-set"); };
+          });
+          box.appendChild(row);
+        });
+      }
+
+      // Prefill z Supabase
+      async function load() {
+        if (!sb) return;
+        var res = await sb.from(TABLE).select("name, paid");
+        if (res.error || !res.data) return;
+        var map = {};
+        res.data.forEach(function (r) { map[r.name] = Number(r.paid); });
+        payers.forEach(function (p) { if (map[p.name] != null) p.paid = map[p.name]; });
+        if (!$("#panel").hidden) buildRows();
+      }
+
+      // Zapis
+      $("#saveBtn").onclick = async function () {
+        if (!sb) { $("#saveMsg").textContent = "Brak połączenia z Supabase (config.js)."; return; }
+        var rows = [];
+        document.querySelectorAll(".adm-input").forEach(function (inp) {
+          rows.push({ name: inp.getAttribute("data-name"), paid: Number(inp.value) || 0, updated_at: new Date().toISOString() });
+        });
+        $("#saveMsg").textContent = "Zapisywanie…";
+        var res = await sb.from(TABLE).upsert(rows, { onConflict: "name" });
+        $("#saveMsg").textContent = res.error ? ("Błąd: " + res.error.message) : "✅ Zapisano! Strona główna zaktualizuje się sama.";
+      };
+
+      if (unlocked()) openPanel();
+      load();
+    })();
+  </script>
+</body>
+</html>

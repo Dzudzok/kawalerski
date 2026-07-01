@@ -44,3 +44,24 @@ create policy "chat read"   on public.kawalerski_chat for select using (true);
 create policy "chat insert" on public.kawalerski_chat for insert with check (true);
 
 alter publication supabase_realtime add table public.kawalerski_chat;
+
+
+-- ===========================================================================
+-- WPŁATY (panel /admin) — kto ile wpłacił. Nadpisuje kwoty z data.js.
+-- ===========================================================================
+create table if not exists public.kawalerski_payments (
+  name        text primary key,          -- imię i nazwisko uczestnika
+  paid        numeric not null default 0,-- wpłacona kwota w zł
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.kawalerski_payments enable row level security;
+
+drop policy if exists "pay read"   on public.kawalerski_payments;
+drop policy if exists "pay insert" on public.kawalerski_payments;
+drop policy if exists "pay update" on public.kawalerski_payments;
+create policy "pay read"   on public.kawalerski_payments for select using (true);
+create policy "pay insert" on public.kawalerski_payments for insert with check (true);
+create policy "pay update" on public.kawalerski_payments for update using (true) with check (true);
+
+alter publication supabase_realtime add table public.kawalerski_payments;

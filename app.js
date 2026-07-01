@@ -16,6 +16,13 @@
   const zl = (n) =>
     Number(n).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " zł";
 
+  // ---------- Supabase (wpłaty na żywo z panelu /admin) ----------
+  const hasSupabase =
+    window.SUPABASE_URL && !String(window.SUPABASE_URL).startsWith("WKLEJ") &&
+    window.SUPABASE_ANON_KEY && !String(window.SUPABASE_ANON_KEY).startsWith("WKLEJ");
+  const sb = hasSupabase ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY) : null;
+  const PAY_TABLE = "kawalerski_payments";
+
   // ---------- Finanse ----------
   const PAYERS = PARTICIPANTS.filter((p) => p.pays);
   const N_PAYERS = PAYERS.length;
@@ -25,9 +32,6 @@
   const busPer = minibusZl / N_PAYERS;
   const committedTotal = COSTS.flightTotal + COSTS.apartmentTotal + minibusZl;
   const perPayer = committedTotal / N_PAYERS; // udział 1 osoby płacącej
-  const collected = PAYERS.reduce((s, p) => s + (p.paid || 0), 0);
-  const remainingTotal = PAYERS.reduce((s, p) => s + Math.max(0, perPayer - (p.paid || 0)), 0);
-
   const remainingFor = (p) => Math.max(0, perPayer - (p.paid || 0));
 
   // Etapy wpłat (narastająco). total = kwota całej ekipy w danym etapie.
@@ -133,6 +137,7 @@
 
   // ---------- Wpłaty ----------
   function renderPayments() {
+    const collected = PAYERS.reduce((s, p) => s + (p.paid || 0), 0);
     const collectedNowTarget = STAGES[0].cum * N_PAYERS; // ile powinno być teraz (zaliczki)
     $("#payTotals").innerHTML = `
       <div class="pt-card"><span>Zaliczka / os (teraz)</span><b>${zl(STAGES[0].cum)}</b><small>samolot + domek cz.1</small></div>
@@ -308,6 +313,51 @@
       <ul class="rules">${EXTRAS.map((e) => `<li>${e}</li>`).join("")}</ul>`;
   }
 
+  // ---------- Gdzie wpłacać ----------
+  function renderPayInfo() {
+    const c = $("#payInfoCard");
+    const P = PAY_INFO;
+    c.innerHTML = `
+      <p class="muted small" style="margin-top:0">Odbiorca: <strong>${P.recipient}</strong></p>
+      <div class="payinfo-row">
+        <div class="pi-left"><span class="pi-label">📱 BLIK na telefon</span><span class="pi-val" id="piBlik">${P.blikPhone}</span></div>
+        <button class="pi-copy" data-copy="${P.blikPhone.replace(/\s/g, "")}">Kopiuj</button>
+      </div>
+      <div class="payinfo-row">
+        <div class="pi-left"><span class="pi-label">🏦 Konto ${P.bank}</span><span class="pi-val" id="piAcc">${P.account}</span></div>
+        <button class="pi-copy" data-copy="${P.account.replace(/\s/g, "")}">Kopiuj</button>
+      </div>
+      <p class="muted small">W tytule wpisz swoje <strong>imię</strong> i etap (np. „Adam — zaliczka").</p>`;
+    c.querySelectorAll(".pi-copy").forEach((b) => {
+      b.onclick = () => {
+        const val = b.getAttribute("data-copy");
+        if (navigator.clipboard) navigator.clipboard.writeText(val).then(() => {
+          const t = b.textContent; b.textContent = "Skopiowano ✓";
+          setTimeout(() => (b.textContent = t), 1400);
+        });
+      };
+    });
+  }
+
+  // ---------- Wpłaty z Supabase (panel /admin) ----------
+  async function loadPayments() {
+    if (!sb) return;
+    const { data, error } = await sb.from(PAY_TABLE).select("name, paid");
+    if (error || !data) return;
+    const map = {};
+    data.forEach((r) => (map[r.name] = Number(r.paid)));
+    PARTICIPANTS.forEach((p) => { if (map[p.name] != null && !isNaN(map[p.name])) p.paid = map[p.name]; });
+    renderPayments();
+    renderMyStatus();
+  }
+  function subscribePayments() {
+    if (!sb) return;
+    sb.channel("pay-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: PAY_TABLE }, loadPayments)
+      .subscribe();
+    setInterval(loadPayments, 15000);
+  }
+
   // ---------- Lightbox ----------
   function openLightbox(src, alt) {
     $("#lightboxImg").src = src;
@@ -362,9 +412,12 @@
 
   renderIdentity();
   renderPayments();
+  renderPayInfo();
   renderFlight();
   renderApartment();
   renderExtras();
   setupChatWidget();
   startHype();
+  loadPayments();
+  subscribePayments();
 })();

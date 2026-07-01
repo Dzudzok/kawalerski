@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0e1116" />
-  <title>Kawalerski Dawida 🍺 — głosowanie</title>
-  <meta name="description" content="Wybór miejsca na kawalerski — 3 opcje, koszty, głosowanie." />
-  <link rel="preconnect" href="https://cf.bstatic.com" />
+  <meta name="theme-color" content="#0a0c13" />
+  <title>Kawalerski Dawida 🍺 — Split (info wyjazdu)</title>
+  <meta name="description" content="Wszystko o wyjeździe: zaliczki, lot, domek, koszty." />
+  <link rel="preconnect" href="https://a0.muscache.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -14,18 +14,19 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍺</text></svg>" />
 </head>
 <body>
-  <!-- Muzyka w tle (bez reklam) -->
+  <!-- Muzyka w tle -->
   <audio id="bgAudio" loop preload="auto">
     <source src="assets/bg.mp3" type="audio/mpeg" />
   </audio>
   <button id="soundToggle" class="sound-toggle" type="button" aria-label="Muzyka">🎵</button>
 
+  <!-- Bramka: kim jesteś (personalizacja + start muzyki) -->
   <div class="gate" id="gate">
     <div class="gate-card">
       <div class="gate-emoji">🍺</div>
-      <p class="gate-kicker">Kawalerski Dawida</p>
+      <p class="gate-kicker">Kawalerski Dawida • Split</p>
       <h2>Cześć! Kim jesteś?</h2>
-      <p class="muted">Wybierz siebie, żeby zobaczyć opcje, koszty i zagłosować.</p>
+      <p class="muted">Wybierz siebie, żeby zobaczyć ile dokładnie masz jeszcze dopłacić.</p>
       <select id="gateSelect" class="who-select" aria-label="Wybierz kim jesteś"></select>
     </div>
   </div>
@@ -34,72 +35,47 @@
     <div class="hero-glow"></div>
     <div class="hero-inner">
       <p class="kicker">🍺 Kawalerski • Pan Młody: <b>Dawid Gajdosz</b> 🤵</p>
-      <h1>Dokąd jedziemy<br />na ostatni wyskok? 🔥</h1>
-      <p class="subtitle">3 opcje • pełne koszty na osobę • głosujesz prosto z telefonu</p>
+      <h1 id="heroTitle">SPLIT 🇭🇷</h1>
+      <p class="subtitle" id="heroDates">30.07 – 02.08.2026</p>
       <div class="pills">
-        <span class="pill">👥 10 ludzi</span>
-        <span class="pill">🎯 budżet 2000 zł/os</span>
-        <span class="pill">🏆 większość wygrywa</span>
+        <span class="pill">👥 9 osób</span>
+        <span class="pill">🛬 Wizz Air</span>
+        <span class="pill">🏠 domek z jacuzzi</span>
       </div>
       <p class="hype" id="hype"></p>
     </div>
   </header>
 
-  <div class="live-bar" id="liveBar" hidden>
-    <button class="lb-toggle" id="lbToggle" type="button" aria-expanded="false">
-      <span class="lb-chips" id="lbChips"></span>
-      <span class="lb-total" id="lbTotal"></span>
-      <span class="lb-caret" id="lbCaret">▾</span>
-    </button>
-    <div class="lb-detail" id="lbDetail" hidden></div>
-  </div>
-
   <main>
     <section class="identity card" id="identityCard">
-      <h2>① Kim jesteś?</h2>
-      <p class="muted">Wybierz siebie — głos zapisze się pod Twoim imieniem (możesz zmienić zdanie później).</p>
+      <h2>💳 Twój status wpłat</h2>
+      <p class="muted small">Wybierz siebie — pokażę ile już wpłaciłeś i ile Ci zostało.</p>
       <select id="whoami" class="who-select" aria-label="Wybierz kim jesteś"></select>
-      <p class="muted small" id="whoamiNote"></p>
+      <div id="myStatus" class="my-status" hidden></div>
     </section>
 
-    <div class="section-title"><h2>② Wybierz wyjazd</h2><span class="muted small">kliknij „Głosuj" na swojej opcji</span></div>
-    <section id="options" class="options"></section>
-
-    <details class="card explainer">
-      <summary>💡 Jak liczona jest cena?</summary>
-      <p><strong>Cena na ekipę</strong> = wszystkie koszty całej grupy (10 os) podzielone na osoby płacące.
-      Koszty wspólne (apartament/hotel) dzielimy przez liczbę osób, a bilety/wejścia są per osoba.
-      <strong>Pan Młody (Dawid) nie płaci</strong> — jego część rozkłada się na pozostałych.
-      Mała kwota „teraz" pokazuje cenę wyliczoną na żywo wg osób, które już zaakceptowały (zagłosowały) —
-      im więcej chętnych, tym taniej.</p>
-    </details>
-
-    <section class="results card" id="resultsCard">
-      <h2>③ 📊 Wyniki na żywo</h2>
-      <p class="muted" id="resultsSummary">Ładowanie głosów…</p>
-      <div id="resultsBars"></div>
+    <div class="section-title"><h2>💰 Zaliczki — kto ile dał</h2></div>
+    <section class="card" id="paymentsCard">
+      <div id="payTotals" class="pay-totals"></div>
+      <div id="payDeadline"></div>
+      <div id="payTable" class="pay-table"></div>
+      <p class="muted small" id="payFoot"></p>
     </section>
 
-    <section class="loan card" id="loanCard">
-      <div class="loan-glow"></div>
-      <p class="loan-tag">💸 PROMOCJA DNIA • RRSO 2999%</p>
-      <h2>Krucho z kasą na wyjazd?</h2>
-      <p class="muted">Spokojnie — <strong>weź pożyczkę u Drąszcza</strong> 🤝 Szybko, „bez formalności".</p>
-      <button class="loan-btn" id="loanBtn" type="button">💰 Chcę pożyczyć kasę</button>
-      <div class="loan-reveal" id="loanReveal" hidden>
-        <a class="loan-phone" href="tel:796327769">📞 796 327 769</a>
-        <p class="loan-fine">Dzwoń śmiało — Drąszcz „załatwi". 😈<br>
-          Zabezpieczenie: Twoje auto i resztki godności. Pierwsza rata już na lotnisku ✈️</p>
-      </div>
-    </section>
+    <div class="section-title"><h2>✈️ Lot</h2></div>
+    <section class="card" id="flightCard"></section>
 
-    <a class="chat-page-link card" href="chat.html">💬 Otwórz pełny czat grupowy (komunikator) →</a>
+    <div class="section-title"><h2>🏠 Domek</h2></div>
+    <section class="card" id="aptCard"></section>
 
-    <p class="config-banner" id="configBanner" hidden></p>
+    <div class="section-title"><h2>🚐 Transport & reszta</h2></div>
+    <section class="card" id="extrasCard"></section>
+
+    <a class="chat-page-link card" href="chat.html">💬 Otwórz czat grupowy (komunikator) →</a>
   </main>
 
   <footer>
-    <p>Organizuje: <strong>Mateusz Durczok</strong> (świadek) • robione z sercem ❤️</p>
+    <p>Organizuje: <strong>Mateusz Durczok</strong> (świadek) • wszystko jasne i po równo ❤️</p>
   </footer>
 
   <!-- Lightbox zdjęć -->

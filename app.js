@@ -1,21 +1,8 @@
 /* =========================================================================
-   Logika: render ofert, koszty, mapa, głosowanie (Supabase) i wyniki.
+   Strona informacyjna wyjazdu: zaliczki, lot, domek, koszty + personalizacja.
    ========================================================================= */
 (function () {
   "use strict";
-
-  // ---------- Supabase / fallback ----------
-  const hasSupabase =
-    window.SUPABASE_URL &&
-    !String(window.SUPABASE_URL).startsWith("WKLEJ") &&
-    window.SUPABASE_ANON_KEY &&
-    !String(window.SUPABASE_ANON_KEY).startsWith("WKLEJ");
-
-  const TABLE = "kawalerski_votes";
-  const CHAT_TABLE = "kawalerski_chat";
-  const sb = hasSupabase
-    ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
-    : null;
 
   // ---------- Helpers ----------
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -25,53 +12,28 @@
     if (html != null) n.innerHTML = html;
     return n;
   };
-  const zl = (n) => Math.round(n).toLocaleString("pl-PL") + " zł";
   const firstName = (full) => full.split(" ")[0];
+  const zl = (n) =>
+    Number(n).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " zł";
 
-  const TOTAL_PEOPLE = PARTICIPANTS.length;
-  // Cała ekipa: G = wszyscy, P = płacący (Pan Młody nie płaci)
-  const FULL = { G: PARTICIPANTS.length, P: PARTICIPANTS.filter((p) => p.pays).length };
+  // ---------- Finanse ----------
+  const PAYERS = PARTICIPANTS.filter((p) => p.pays);
+  const N_PAYERS = PAYERS.length;
+  const minibusZl = COSTS.minibusEUR * TRIP.eurRate;
+  const flightPer = COSTS.flightTotal / N_PAYERS;
+  const aptPer = COSTS.apartmentTotal / N_PAYERS;
+  const busPer = minibusZl / N_PAYERS;
+  const committedTotal = COSTS.flightTotal + COSTS.apartmentTotal + minibusZl;
+  const perPayer = committedTotal / N_PAYERS; // udział 1 osoby płacącej
+  const collected = PAYERS.reduce((s, p) => s + (p.paid || 0), 0);
+  const remainingTotal = PAYERS.reduce((s, p) => s + Math.max(0, perPayer - (p.paid || 0)), 0);
 
-  // Kto już zaakceptował (oddał głos) = idzie na wyjazd
-  function goingNow() {
-    const voted = currentVotes;
-    const set = PARTICIPANTS.filter((p) => voted[p.name]);
-    return { G: set.length, P: set.filter((p) => p.pays).length };
-  }
+  const remainingFor = (p) => Math.max(0, perPayer - (p.paid || 0));
 
-  // Cena na 1 osobę płacącą przy liczebności going = {G, P}
-  function pricePerPayer(option, going) {
-    let pp = 0, shared = 0;
-    (option.costs || []).forEach((c) => {
-      if (c.shared) shared += c.amount || 0; else pp += c.amount || 0;
-    });
-    const total = pp * going.G + shared;       // koszt całej grupy
-    return going.P > 0 ? total / going.P : null; // dzielony na płacących
-  }
-
-  function groupTotal(option, going) {
-    let pp = 0, shared = 0;
-    (option.costs || []).forEach((c) => {
-      if (c.shared) shared += c.amount || 0; else pp += c.amount || 0;
-    });
-    return pp * going.G + shared;
-  }
-
-  function totals(option) {
-    return { full: pricePerPayer(option, FULL), now: pricePerPayer(option, goingNow()) };
-  }
-  const optionReady = (o) => (o.costs || []).length > 0;
-
-  // ---------- Stan głosującego ----------
+  // ---------- Tożsamość + bramka ----------
   const WHO_KEY = "kawalerski_whoami";
   let whoami = localStorage.getItem(WHO_KEY) || "";
-  let currentVotes = {}; // { name: optionId }
-  // Które karty są rozwinięte (domyślnie wszystko zwinięte).
-  const expanded = {};
-  OPTIONS.forEach((o) => (expanded[o.id] = false));
-  let counterOpen = false; // czy rozwinięty panel "kto co wybrał"
 
-  // ---------- Identity + bramka ----------
   function fillSelect(sel) {
     sel.innerHTML = "";
     const ph = el("option", "", "— wybierz siebie —");
@@ -84,460 +46,209 @@
       sel.appendChild(o);
     });
   }
-
   function updateGate() {
     $("#gate").classList.toggle("open", !whoami);
     document.body.style.overflow = whoami ? "" : "hidden";
   }
-
   function setWhoami(name) {
     whoami = name;
     localStorage.setItem(WHO_KEY, whoami);
     $("#whoami").value = whoami;
     $("#gateSelect").value = whoami;
     updateGate();
-    updateWhoamiNote();
-    renderOptions();
+    renderMyStatus();
+    renderTable();
     if (window.KawalerskiChat) KawalerskiChat.refresh();
   }
-
   function renderIdentity() {
     fillSelect($("#whoami"));
     fillSelect($("#gateSelect"));
     $("#whoami").onchange = (e) => setWhoami(e.target.value);
     $("#gateSelect").onchange = (e) => setWhoami(e.target.value);
     updateGate();
-    updateWhoamiNote();
+    renderMyStatus();
   }
 
-  function updateWhoamiNote() {
-    const note = $("#whoamiNote");
+  function renderMyStatus() {
+    const box = $("#myStatus");
     const me = PARTICIPANTS.find((p) => p.name === whoami);
-    if (!me) { note.textContent = ""; return; }
-    note.textContent = me.pays
-      ? `Cześć ${firstName(me.name)}! Poniżej widzisz dokładnie ile zapłacisz w każdej opcji.`
-      : `${me.name} — Pan Młody nie płaci 🤵 Twoja część jest dzielona między pozostałych.`;
+    if (!me) { box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = "";
+    if (!me.pays) {
+      box.appendChild(el("p", "ms-line", `🤵 <strong>${firstName(me.name)}</strong>, jesteś Panem Młodym — <strong>nie płacisz nic. 0 zł 🎉</strong>`));
+      return;
+    }
+    const left = remainingFor(me);
+    box.appendChild(el("div", "ms-grid", `
+      <div class="ms-item"><span>Twój udział</span><b>${zl(perPayer)}</b></div>
+      <div class="ms-item"><span>Wpłacono</span><b class="ok">${zl(me.paid || 0)}</b></div>
+      <div class="ms-item big"><span>Zostało Ci dopłacić</span><b class="${left > 0 ? "due" : "ok"}">${left > 0 ? zl(left) : "0 zł ✅"}</b></div>
+    `));
+    if (left > 0) {
+      box.appendChild(el("p", "ms-note", `Termin dopłaty za domek: <strong>${PAYMENTS.apartmentDueDate}</strong>. Reszta pokrywa lot i minibus.`));
+    } else {
+      box.appendChild(el("p", "ms-note ok", "Wszystko wpłacone — dziękujemy! 🍻"));
+    }
   }
 
-  // ---------- Opcje ----------
-  function renderOptions() {
-    const wrap = $("#options");
-    wrap.innerHTML = "";
-    const myVote = currentVotes[whoami];
+  // ---------- Zaliczki ----------
+  function renderPayments() {
+    $("#payTotals").innerHTML = `
+      <div class="pt-card"><span>Koszt na osobę</span><b>${zl(perPayer)}</b><small>lot + domek + minibus</small></div>
+      <div class="pt-card"><span>Zebrane zaliczki</span><b class="ok">${zl(collected)}</b><small>${N_PAYERS} os. płacących</small></div>
+      <div class="pt-card"><span>Zostało do zebrania</span><b class="due">${zl(remainingTotal)}</b><small>łącznie od ekipy</small></div>`;
 
-    const now = goingNow();
-    const me = PARTICIPANTS.find((p) => p.name === whoami);
-    const mePays = me ? me.pays : true;
-    OPTIONS.forEach((opt) => {
-      const { full, now: nowPrice } = totals(opt);
-      const yourFull = mePays ? full : 0;     // Pan Młody nie płaci => 0 zł
-      const yourNow = mePays ? nowPrice : 0;
-      const ready = optionReady(opt);
-      const isOpen = !!expanded[opt.id];
-      const over = yourFull > BUDGET_TARGET;
-      const card = el("article",
-        "card option" + (opt.favorite ? " favorite" : "") +
-        (myVote === opt.id ? " chosen" : "") + (isOpen ? "" : " collapsed"));
-      if (opt.favorite) card.appendChild(el("div", "fav-ribbon", "⭐ FAWORYT EKIPY"));
+    $("#payDeadline").innerHTML = `
+      <div class="deadline">⏰ Domek: dopłata <strong>${zl(PAYMENTS.apartmentDue)}</strong> do <strong>${PAYMENTS.apartmentDueDate}</strong>
+      <span class="muted">(zapłacono już ${zl(PAYMENTS.apartmentPaid)})</span></div>`;
 
-      // --- Summary (zawsze widoczne, klikalne) ---
-      const head = el("button", "opt-head");
-      head.type = "button";
-      head.setAttribute("aria-expanded", isOpen ? "true" : "false");
-      const titleRow = el("div", "title-row");
-      titleRow.appendChild(el("span", "opt-emoji", opt.emoji || "📍"));
-      const tcol = el("div", "title-col");
-      tcol.appendChild(el("h2", "", `${opt.title} <span class="country">${opt.country || ""}</span>`));
-      if (opt.subtitle) tcol.appendChild(el("p", "muted opt-sub", opt.subtitle));
-      titleRow.appendChild(tcol);
-      head.appendChild(titleRow);
+    renderTable();
 
-      const sumRight = el("div", "head-right");
-      if (ready) {
-        const price = el("div", "head-price");
-        price.appendChild(el("span", "hp-label", "Twoja cena"));
-        price.appendChild(el("span", "hp-amt" + (over ? " over" : ""), zl(yourFull)));
-        price.appendChild(el("span", "hp-now", !mePays
-          ? "Pan Młody nie płaci 🎉"
-          : (nowPrice ? `teraz: ${zl(yourNow)} (${now.G})` : "teraz: — (0 zgłoszeń)")));
-        sumRight.appendChild(price);
-        sumRight.appendChild(el("span", "head-budget " + (over ? "over" : "ok"),
-          !mePays ? "gratis 🎉" : (over ? "ponad budżet" : "w budżecie")));
+    $("#payFoot").innerHTML =
+      `„Udział" = koszty stałe (lot ${zl(flightPer)} + domek ${zl(aptPer)} + minibus ${zl(busPer)}) na 1 osobę płacącą. ` +
+      `Pan Młody nie płaci — jego część już wliczona. Alkohol, jedzenie i imprezy dochodzą osobno.`;
+  }
+
+  function renderTable() {
+    const t = $("#payTable");
+    t.innerHTML = "";
+    const head = el("div", "prow phead");
+    head.innerHTML = `<span>Osoba</span><span>Wpłacono</span><span>Brakuje</span>`;
+    t.appendChild(head);
+
+    PARTICIPANTS.forEach((p) => {
+      const row = el("div", "prow" + (p.name === whoami ? " me" : "") + (!p.pays ? " groom" : ""));
+      if (!p.pays) {
+        row.innerHTML =
+          `<span class="pname">${p.name} <em>🤵</em></span><span class="ppaid">—</span><span class="pleft ok">nie płaci</span>`;
       } else {
-        sumRight.appendChild(el("span", "head-soon", "wkrótce"));
+        const left = remainingFor(p);
+        const paidTxt = zl(p.paid || 0) + (p.note ? ` <em>(${p.note})</em>` : "");
+        row.innerHTML =
+          `<span class="pname">${p.name}</span>` +
+          `<span class="ppaid">${paidTxt}</span>` +
+          `<span class="pleft ${left > 0 ? "due" : "ok"}">${left > 0 ? zl(left) : "✅ 0 zł"}</span>`;
       }
-      sumRight.appendChild(el("span", "chevron", "▾"));
-      head.appendChild(sumRight);
-
-      head.onclick = () => { expanded[opt.id] = !expanded[opt.id]; renderOptions(); };
-      card.appendChild(head);
-
-      // --- Body (zwijane) ---
-      const body = el("div", "opt-body");
-
-      if (opt.badges && opt.badges.length) {
-        const b = el("div", "badges");
-        opt.badges.forEach((x) => b.appendChild(el("span", "badge", x)));
-        body.appendChild(b);
-      }
-
-      if (opt.warning) {
-        body.appendChild(el("div", "opt-warning", "⚠️ " + opt.warning));
-      }
-
-      // --- Galeria ---
-      if (opt.images && opt.images.length) {
-        const gal = el("div", "gallery");
-        opt.images.forEach((src) => {
-          const btn = el("button", "gal-item");
-          btn.type = "button";
-          const img = el("img");
-          img.loading = "lazy"; img.src = src; img.alt = opt.title;
-          btn.appendChild(img);
-          btn.onclick = () => openLightbox(src, opt.title);
-          gal.appendChild(btn);
-        });
-        body.appendChild(gal);
-      }
-
-      // --- Loty ---
-      if (opt.flightThere || opt.flightBack) {
-        const fl = el("div", "flights");
-        if (opt.flightThere) fl.appendChild(flightRow("➡️", opt.flightThere));
-        if (opt.flightBack) fl.appendChild(flightRow("⬅️", opt.flightBack));
-        if (opt.flightNote) {
-          const fn = el("div", "flight-note", opt.flightNote);
-          fl.appendChild(fn);
-        }
-        body.appendChild(fl);
-      }
-
-      // --- Lokalizacja + mapa ---
-      if (opt.address || opt.mapQuery) {
-        const loc = el("section", "loc");
-        if (opt.place) loc.appendChild(el("p", "loc-place", opt.place));
-        if (opt.address) loc.appendChild(el("p", "loc-addr", "📍 " + opt.address));
-        if (opt.mapQuery) {
-          const iframe = document.createElement("iframe");
-          iframe.className = "map";
-          iframe.loading = "lazy";
-          iframe.referrerPolicy = "no-referrer-when-downgrade";
-          iframe.src = `https://www.google.com/maps?q=${encodeURIComponent(opt.mapQuery)}&z=13&output=embed`;
-          loc.appendChild(iframe);
-          const mapsLink = el("a", "btn-link sm", "🗺️ Otwórz w Mapach Google");
-          mapsLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(opt.mapQuery)}`;
-          mapsLink.target = "_blank"; mapsLink.rel = "noopener";
-          loc.appendChild(mapsLink);
-        }
-        if (opt.nearby && opt.nearby.length) {
-          const nb = el("ul", "nearby");
-          opt.nearby.forEach((n) =>
-            nb.appendChild(el("li", "", `<span>${n.name}</span><span class="nb-dist">${n.dist}</span>`))
-          );
-          loc.appendChild(nb);
-        }
-        if (opt.mapImage) {
-          const det = el("details", "map-shot");
-          det.appendChild(el("summary", "", "📸 Podgląd okolicy (Booking)"));
-          const im = el("img");
-          im.loading = "lazy"; im.src = opt.mapImage; im.alt = "Mapa okolicy " + opt.title;
-          det.appendChild(im);
-          loc.appendChild(det);
-        }
-        body.appendChild(loc);
-      }
-
-      // --- Koszty ---
-      if (ready) {
-        const table = el("div", "costs");
-        opt.costs.forEach((c) => {
-          const row = el("div", "cost-row");
-          const left = el("div", "cost-label");
-          left.appendChild(el("span", "cost-main", `${c.icon || "•"} ${c.label}`));
-          if (c.note) left.appendChild(el("span", "cost-note", c.note));
-          row.appendChild(left);
-          row.appendChild(el("div", "cost-amt",
-            zl(c.amount) + `<span class="cost-per">/ ${c.shared ? "ekipa" : "os"}</span>`));
-          table.appendChild(row);
-        });
-        body.appendChild(table);
-
-        const sum = el("div", "summary");
-        sum.appendChild(rowKV(`Koszt całej ekipy (${FULL.G} os)`, zl(groupTotal(opt, FULL)), false));
-        sum.appendChild(rowKV(`÷ ${FULL.P} płacących (Pan Młody gratis 🤵)`, zl(full) + " / os", false));
-        sum.appendChild(rowKV("👉 Twoja cena", !mePays ? "0 zł 🎉" : zl(yourFull), true));
-        const nowRow = rowKV(`Teraz wg zgłoszeń (${now.G}/${FULL.G} chętnych)`,
-          !mePays ? "0 zł" : (nowPrice ? zl(yourNow) : "— brak zgłoszeń"), false);
-        nowRow.classList.add("now-row");
-        sum.appendChild(nowRow);
-        sum.appendChild(el(
-          "div", "budget-badge " + (over ? "over" : "ok"),
-          !mePays ? "🎉 Pan Młody nie płaci — gratis!"
-                  : (over ? `⚠️ ${zl(yourFull - BUDGET_TARGET)} ponad budżet`
-                          : `✅ w budżecie • ${zl(BUDGET_TARGET - yourFull)} zapasu`)
-        ));
-        body.appendChild(sum);
-      } else {
-        body.appendChild(el("p", "todo", "🚧 Szczegóły i koszty wkrótce — uzupełniane."));
-      }
-
-      // --- Highlights ---
-      if (opt.highlights && opt.highlights.length) {
-        const h = el("div", "highlights-wrap");
-        h.appendChild(el("p", "hl-title", "Co w cenie / atrakcje"));
-        const ul = el("ul", "highlights");
-        opt.highlights.forEach((x) => ul.appendChild(el("li", "", x)));
-        h.appendChild(ul);
-        body.appendChild(h);
-      }
-
-      // --- Linki ---
-      if (opt.bookingLink) {
-        const links = el("div", "links");
-        const a = el("a", "btn-booking",
-          '<span class="bk-logo">Booking.com</span><span class="bk-text">Zobacz pełną ofertę i zdjęcia →</span>');
-        a.href = opt.bookingLink; a.target = "_blank"; a.rel = "noopener";
-        links.appendChild(a);
-        body.appendChild(links);
-      }
-
-      // --- Głosowanie ---
-      const voteWrap = el("div", "vote");
-      const voted = myVote === opt.id;
-      const votedOther = myVote && myVote !== opt.id;
-      let label, cls;
-      if (voted) { label = "✅ Twój wybór"; cls = " active"; }
-      else if (votedOther) { label = "🔁 Zmień głos na tę opcję"; cls = " change"; }
-      else { label = "🗳️ Głosuj na tę opcję"; cls = ""; }
-      const btn = el("button", "vote-btn" + cls, label);
-      btn.disabled = !whoami || voted;
-      btn.title = whoami ? "" : "Najpierw wybierz kim jesteś (na górze)";
-      btn.onclick = (e) => castVote(opt.id, e);
-      voteWrap.appendChild(btn);
-      if (whoami && voted) {
-        voteWrap.appendChild(el("p", "vote-hint", "Możesz zmienić wybór klikając inną opcję — w każdej chwili."));
-      }
-      body.appendChild(voteWrap);
-
-      card.appendChild(body);
-      wrap.appendChild(card);
+      t.appendChild(row);
     });
   }
 
-  function flightRow(arrow, text) {
-    const r = el("div", "flight-row");
-    r.appendChild(el("span", "fl-arrow", arrow));
-    r.appendChild(el("span", "fl-text", text));
-    return r;
-  }
-  function rowKV(k, v, big) {
-    const r = el("div", "kv" + (big ? " your-price" : ""));
-    r.appendChild(el("span", "k", k));
-    r.appendChild(el("span", "v", v));
-    return r;
-  }
-
-  // ---------- Konfetti 🎉 ----------
-  function popConfetti(x, y) {
-    const emojis = ["🍺", "🎉", "🥳", "🔥", "✈️", "🏖️", "🍻"];
-    for (let i = 0; i < 18; i++) {
-      const s = el("span", "confetti", emojis[Math.floor(Math.random() * emojis.length)]);
-      const ang = (Math.random() - 0.5) * 2; // -1..1
-      s.style.left = x + "px";
-      s.style.top = y + "px";
-      s.style.setProperty("--dx", (ang * 220).toFixed(0) + "px");
-      s.style.setProperty("--dy", (-160 - Math.random() * 160).toFixed(0) + "px");
-      s.style.setProperty("--rot", (Math.random() * 720 - 360).toFixed(0) + "deg");
-      s.style.fontSize = 14 + Math.random() * 16 + "px";
-      s.style.animationDelay = (Math.random() * 0.08).toFixed(2) + "s";
-      document.body.appendChild(s);
-      setTimeout(() => s.remove(), 1300);
-    }
+  // ---------- Lot ----------
+  function renderFlight() {
+    const c = $("#flightCard");
+    const legRow = (leg, arrow, label) => `
+      <div class="leg">
+        <div class="leg-top"><span class="leg-label">${arrow} ${label}</span><span class="leg-no">${leg.no}</span></div>
+        <div class="leg-body">
+          <div class="leg-pt"><b>${leg.from}</b><span>${leg.dep}</span></div>
+          <div class="leg-arrow">✈</div>
+          <div class="leg-pt right"><b>${leg.to}</b><span>${leg.arr}</span></div>
+        </div>
+      </div>`;
+    let bookings = FLIGHT.bookings.map((b) =>
+      `<div class="bk"><span class="bk-code">${b.code}</span><span class="bk-who">${b.who}</span><span class="bk-amt">${zl(b.amount)}</span></div>`
+    ).join("");
+    c.innerHTML = `
+      <p class="apt-name">🛬 ${FLIGHT.airline}</p>
+      ${legRow(FLIGHT.out, "➡️", "Wylot")}
+      ${legRow(FLIGHT.back, "⬅️", "Powrót")}
+      <div class="mini-sum"><span>Razem za loty</span><b>${zl(FLIGHT.total)}</b></div>
+      <div class="mini-sum"><span>Na osobę płacącą (${N_PAYERS})</span><b>${zl(flightPer)}</b></div>
+      <p class="hl-title" style="margin-top:16px">Kody potwierdzenia (kto na jakim)</p>
+      <div class="bookings">${bookings}</div>`;
   }
 
-  // ---------- Toast 🍻 ----------
-  const VOTE_HYPE = [
-    "🔥 Świetny wybór!", "🍻 Lecimy z tym!", "💪 Dobra decyzja!",
-    "🎉 Zapisane!", "✈️ Pakuj walizkę!", "😎 Mocny ruch!", "🤙 Zanotowane!",
-  ];
-  function showToast(msg) {
-    const t = el("div", "toast", msg);
-    document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add("show"));
-    setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 320); }, 1800);
-  }
+  // ---------- Domek ----------
+  function renderApartment() {
+    const a = APARTMENT;
+    const c = $("#aptCard");
+    c.innerHTML = "";
 
-  // ---------- Rotujące hasła w hero ----------
-  function startHype() {
-    const lines = [
-      "Co się dzieje na wyjeździe, zostaje na grupie 🤐",
-      "Budżet 2000 zł… chyba że ktoś weźmie pożyczkę u Drąszcza 💸",
-      "Pan Młody nie płaci — reszta płacze 😅",
-      "Głosuj mądrze, kac będzie wspólny 🍻",
-      "Ostatni wolny weekend Dawida 🫡",
-      "Zero zdjęć dla narzeczonej 📵",
-      "Większość wygrywa, marudy płaczą w Uberze 🚕",
-    ];
-    const h = $("#hype");
-    if (!h) return;
-    let i = Math.floor(Math.random() * lines.length);
-    const tick = () => { h.textContent = lines[i % lines.length]; i++; };
-    tick();
-    h.classList.add("show");
-    setInterval(() => {
-      h.classList.remove("show");
-      setTimeout(() => { tick(); h.classList.add("show"); }, 320);
-    }, 4500);
-  }
+    c.appendChild(el("p", "apt-name", "🏠 " + a.name));
+    c.appendChild(el("p", "loc-addr", "📍 " + a.area));
 
-  // ---------- Głosowanie ----------
-  async function castVote(optionId, ev) {
-    if (!whoami) return;
-    const changed = currentVotes[whoami] !== optionId;
-    currentVotes[whoami] = optionId; // optimistic
-    if (changed && ev && ev.clientX) {
-      popConfetti(ev.clientX, ev.clientY);
-      showToast(VOTE_HYPE[Math.floor(Math.random() * VOTE_HYPE.length)]);
-    }
-    renderOptions();
-    renderResults();
-    renderCounter();
-    lastVotesJSON = JSON.stringify(currentVotes); // unikaj podwójnego renderu po zapisie
-
-    if (sb) {
-      const { error } = await sb
-        .from(TABLE)
-        .upsert({ name: whoami, option_id: optionId, updated_at: new Date().toISOString() }, { onConflict: "name" });
-      if (error) alert("Nie udało się zapisać głosu: " + error.message);
-      await loadVotes();
-    } else {
-      localStorage.setItem("kawalerski_votes_local", JSON.stringify(currentVotes));
-    }
-  }
-
-  let lastVotesJSON = null;
-  async function loadVotes() {
-    if (sb) {
-      const { data, error } = await sb.from(TABLE).select("name, option_id");
-      if (!error && data) {
-        currentVotes = {};
-        data.forEach((r) => (currentVotes[r.name] = r.option_id));
-      }
-    } else {
-      try { currentVotes = JSON.parse(localStorage.getItem("kawalerski_votes_local")) || {}; }
-      catch (e) { currentVotes = {}; }
-    }
-    // Przerysuj tylko gdy głosy faktycznie się zmieniły (inaczej mapy migają co poll)
-    const json = JSON.stringify(currentVotes);
-    if (json === lastVotesJSON) return;
-    lastVotesJSON = json;
-    renderOptions();
-    renderResults();
-    renderCounter();
-  }
-
-  // ---------- Wyniki ----------
-  function renderResults() {
-    const bars = $("#resultsBars");
-    const summary = $("#resultsSummary");
-    bars.innerHTML = "";
-
-    const counts = {};
-    OPTIONS.forEach((o) => (counts[o.id] = []));
-    Object.entries(currentVotes).forEach(([name, oid]) => {
-      if (counts[oid]) counts[oid].push(name);
-    });
-
-    const totalVotes = Object.values(currentVotes).length;
-    const maxCount = Math.max(1, ...OPTIONS.map((o) => counts[o.id].length));
-    const leadCount = Math.max(0, ...OPTIONS.map((o) => counts[o.id].length));
-    const leaders = OPTIONS.filter((o) => counts[o.id].length === leadCount && leadCount > 0);
-    const notVoted = PARTICIPANTS.filter((p) => !currentVotes[p.name]).map((p) => firstName(p.name));
-
-    OPTIONS.forEach((o) => {
-      const c = counts[o.id].length;
-      const row = el("div", "bar-row");
-      const h = el("div", "bar-head");
-      h.appendChild(el("span", "", `${o.emoji || ""} ${o.title}`));
-      h.appendChild(el("span", "bar-count", `${c} głos${plural(c)}`));
-      row.appendChild(h);
-      const track = el("div", "bar-track");
-      const fill = el("div", "bar-fill" + (leaders.includes(o) ? " lead" : ""));
-      fill.style.width = (c / maxCount) * 100 + "%";
-      track.appendChild(fill);
-      row.appendChild(track);
-      if (c) row.appendChild(el("div", "bar-voters", counts[o.id].map(firstName).join(", ")));
-      bars.appendChild(row);
-    });
-
-    if (totalVotes === 0) {
-      summary.textContent = "Jeszcze nikt nie głosował — bądź pierwszy!";
-    } else if (leaders.length === 1) {
-      summary.innerHTML = `Oddano <strong>${totalVotes}/${TOTAL_PEOPLE}</strong> głosów. Prowadzi: <strong>${leaders[0].emoji} ${leaders[0].title}</strong> 🏆`;
-    } else {
-      summary.innerHTML = `Oddano <strong>${totalVotes}/${TOTAL_PEOPLE}</strong> głosów. Remis: ${leaders.map((l) => l.title).join(" vs ")}.`;
-    }
-    if (notVoted.length && totalVotes > 0) {
-      bars.appendChild(el("p", "muted small not-voted", "Nie głosowali jeszcze: " + notVoted.join(", ")));
-    }
-  }
-
-  const plural = (n) => (n === 1 ? "" : n >= 2 && n <= 4 ? "y" : "ów");
-
-  // ---------- Sticky licznik (kto co wybrał) ----------
-  function renderCounter() {
-    const bar = $("#liveBar");
-    bar.hidden = false;
-
-    const counts = {};
-    OPTIONS.forEach((o) => (counts[o.id] = []));
-    Object.entries(currentVotes).forEach(([name, oid]) => {
-      if (counts[oid]) counts[oid].push(name);
-    });
-    const total = Object.values(currentVotes).length;
-    const leadCount = Math.max(0, ...OPTIONS.map((o) => counts[o.id].length));
-
-    // Chipsy: emoji + liczba
-    const chips = $("#lbChips");
-    chips.innerHTML = "";
-    OPTIONS.forEach((o) => {
-      const c = counts[o.id].length;
-      const chip = el("span", "lb-chip" + (c === leadCount && leadCount > 0 ? " lead" : ""));
-      chip.innerHTML = `${o.emoji || "📍"} <span class="lb-chip-name">${o.title}</span> <b>${c}</b>`;
-      chip.title = o.title;
-      chips.appendChild(chip);
-    });
-    $("#lbTotal").textContent = `${total}/${TOTAL_PEOPLE}`;
-
-    // Szczegóły: kto co wybrał
-    const detail = $("#lbDetail");
-    detail.hidden = !counterOpen;
-    $("#lbCaret").style.transform = counterOpen ? "rotate(180deg)" : "";
-    if (counterOpen) {
-      detail.innerHTML = "";
-      OPTIONS.forEach((o) => {
-        const names = counts[o.id];
-        const row = el("div", "lbd-row");
-        row.appendChild(el("span", "lbd-opt", `${o.emoji || "📍"} ${o.title}`));
-        row.appendChild(el("span", "lbd-names", names.length ? names.map(firstName).join(", ") : "—"));
-        detail.appendChild(row);
+    // Galeria
+    if (a.images && a.images.length) {
+      const gal = el("div", "gallery gallery-2");
+      a.images.forEach((src) => {
+        const btn = el("button", "gal-item");
+        btn.type = "button";
+        const img = el("img");
+        img.loading = "lazy"; img.src = src; img.alt = a.name;
+        btn.appendChild(img);
+        btn.onclick = () => openLightbox(src, a.name);
+        gal.appendChild(btn);
       });
-      const notVoted = PARTICIPANTS.filter((p) => !currentVotes[p.name]).map((p) => firstName(p.name));
-      if (notVoted.length) {
-        const nv = el("div", "lbd-row lbd-novote");
-        nv.appendChild(el("span", "lbd-opt", "⏳ Brak głosu"));
-        nv.appendChild(el("span", "lbd-names", notVoted.join(", ")));
-        detail.appendChild(nv);
-      }
+      c.appendChild(gal);
     }
+
+    // Zameldowanie
+    c.appendChild(el("div", "checks", `
+      <div class="check"><span>Zameldowanie</span><b>${a.checkin}</b></div>
+      <div class="check"><span>Wymeldowanie</span><b>${a.checkout}</b></div>
+      <div class="check"><span>Wejście</span><b>${a.selfCheckin}</b></div>
+      <div class="check"><span>Maks. gości</span><b>${a.maxGuests}</b></div>`));
+
+    // Koszt domku
+    c.appendChild(el("div", "mini-sum", `<span>Domek razem</span><b>${zl(COSTS.apartmentTotal)}</b>`));
+    c.appendChild(el("div", "mini-sum", `<span>Zapłacono</span><b class="ok">${zl(PAYMENTS.apartmentPaid)}</b>`));
+    c.appendChild(el("div", "mini-sum", `<span>Do dopłaty (${PAYMENTS.apartmentDueDate})</span><b class="due">${zl(PAYMENTS.apartmentDue)}</b>`));
+
+    // Zasady
+    const rules = el("div", "rules-wrap");
+    rules.appendChild(el("p", "hl-title", "Zasady domku"));
+    const ul = el("ul", "rules");
+    a.rules.forEach((r) => ul.appendChild(el("li", "", r)));
+    rules.appendChild(ul);
+    c.appendChild(rules);
+
+    const before = el("div", "rules-wrap");
+    before.appendChild(el("p", "hl-title", "Przed wyjazdem (ważne!)"));
+    const ul2 = el("ul", "rules");
+    a.before.forEach((r) => ul2.appendChild(el("li", "", r)));
+    before.appendChild(ul2);
+    c.appendChild(before);
+
+    // Mapa (zrzut) + linki
+    if (a.mapImage) {
+      const btn = el("button", "gal-item map-shot-btn");
+      btn.type = "button";
+      const img = el("img");
+      img.loading = "lazy"; img.src = a.mapImage; img.alt = "Mapa domku";
+      btn.appendChild(img);
+      btn.onclick = () => openLightbox(a.mapImage, "Mapa domku");
+      c.appendChild(btn);
+    }
+    const links = el("div", "links");
+    if (a.link) links.appendChild(linkBtn(a.link, "🔗 Domek na Airbnb"));
+    if (a.mapLink) links.appendChild(linkBtn(a.mapLink, "🗺️ Lokalizacja"));
+    c.appendChild(links);
   }
 
-  // ---------- Lightbox zdjęć ----------
+  function linkBtn(href, label) {
+    const x = el("a", "btn-link", label);
+    x.href = href; x.target = "_blank"; x.rel = "noopener";
+    return x;
+  }
+
+  // ---------- Transport & reszta ----------
+  function renderExtras() {
+    const c = $("#extrasCard");
+    c.innerHTML = `
+      <p class="apt-name">🚐 Prywatny minibus dla ekipy</p>
+      <p class="muted">Transport lotnisko ⇄ domek (tam i z powrotem).</p>
+      <div class="mini-sum"><span>Razem</span><b>${COSTS.minibusEUR} € <span class="muted">≈ ${zl(minibusZl)}</span></b></div>
+      <div class="mini-sum"><span>Na osobę płacącą (${N_PAYERS})</span><b>${zl(busPer)}</b></div>
+      <p class="hl-title" style="margin-top:18px">Do tego dochodzi jeszcze (osobno / na miejscu)</p>
+      <ul class="rules">${EXTRAS.map((e) => `<li>${e}</li>`).join("")}</ul>`;
+  }
+
+  // ---------- Lightbox ----------
   function openLightbox(src, alt) {
-    const lb = $("#lightbox");
     $("#lightboxImg").src = src;
     $("#lightboxImg").alt = alt || "Podgląd";
-    lb.hidden = false;
+    $("#lightbox").hidden = false;
     document.body.style.overflow = "hidden";
   }
   function closeLightbox() {
@@ -546,76 +257,50 @@
     if (whoami) document.body.style.overflow = "";
   }
 
-  // ---------- Pływający widget czatu ----------
+  // ---------- Widget czatu ----------
   function setupChatWidget() {
     if (!window.KawalerskiChat) return;
     KawalerskiChat.mount({ msgsEl: $("#cwMsgs"), formEl: $("#cwForm"), inputEl: $("#cwInput") });
-    const fab = $("#chatFab");
-    const widget = $("#chatWidget");
-    const badge = $("#chatBadge");
-    KawalerskiChat.setUnreadHandler((n) => {
-      badge.hidden = !n;
-      badge.textContent = n > 9 ? "9+" : String(n);
-    });
-    const openW = () => {
+    const fab = $("#chatFab"), widget = $("#chatWidget"), badge = $("#chatBadge");
+    KawalerskiChat.setUnreadHandler((n) => { badge.hidden = !n; badge.textContent = n > 9 ? "9+" : String(n); });
+    fab.onclick = () => {
       widget.hidden = false; fab.classList.add("hidden");
-      KawalerskiChat.refresh();
-      KawalerskiChat.markSeen();
+      KawalerskiChat.refresh(); KawalerskiChat.markSeen();
       setTimeout(() => $("#cwInput") && $("#cwInput").focus(), 50);
     };
-    const closeW = () => { widget.hidden = true; fab.classList.remove("hidden"); };
-    fab.onclick = openW;
-    $("#chatWidgetClose").onclick = closeW;
+    $("#chatWidgetClose").onclick = () => { widget.hidden = true; fab.classList.remove("hidden"); };
   }
 
-  // ---------- Banner ----------
-  function renderBanner() {
-    if (hasSupabase) return;
-    const b = $("#configBanner");
-    b.hidden = false;
-    b.innerHTML =
-      "⚙️ <strong>Tryb podglądu</strong>: Supabase nie jest jeszcze skonfigurowany (<code>config.js</code>) — głosy zapisują się tylko lokalnie. Patrz README.md.";
-  }
-
-  // ---------- Realtime ----------
-  function subscribe() {
-    if (!sb) return;
-    sb.channel("votes-rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: TABLE }, loadVotes)
-      .subscribe();
-    setInterval(loadVotes, 8000);
+  // ---------- Rotujące hasła ----------
+  function startHype() {
+    const lines = [
+      "Ostatni wolny weekend Dawida 🫡",
+      "Wpłać zaliczkę, zanim Drąszcz 😏",
+      "Co się dzieje w Splicie, zostaje w Splicie 🤐",
+      "Jacuzzi czeka 🛁🍾",
+      "Nigdy nie wyłączaj jacuzzi — to zasada domu 😅",
+      "Cisza po 22:00… teoretycznie 🔇",
+    ];
+    const h = $("#hype");
+    if (!h) return;
+    let i = 0;
+    const tick = () => { h.textContent = lines[i % lines.length]; i++; };
+    tick(); h.classList.add("show");
+    setInterval(() => { h.classList.remove("show"); setTimeout(() => { tick(); h.classList.add("show"); }, 320); }, 4500);
   }
 
   // ---------- Init ----------
-  $("#lbToggle").onclick = () => {
-    counterOpen = !counterOpen;
-    $("#lbToggle").setAttribute("aria-expanded", counterOpen ? "true" : "false");
-    renderCounter();
-  };
+  $("#heroTitle").innerHTML = `${TRIP.title} ${TRIP.country.split(" ").pop()}`;
+  $("#heroDates").textContent = TRIP.datesLong;
   $("#lightbox").onclick = closeLightbox;
   $("#lightboxClose").onclick = closeLightbox;
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
 
-  // Żartobliwy widget pożyczki u Drąszcza 💸
-  const loanBtn = $("#loanBtn");
-  if (loanBtn) {
-    loanBtn.onclick = (e) => {
-      const r = $("#loanReveal");
-      const opening = r.hidden;
-      r.hidden = !opening;
-      loanBtn.textContent = opening ? "🙈 Schowaj numer" : "💰 Chcę pożyczyć kasę";
-      if (opening && e && e.clientX) {
-        popConfetti(e.clientX, e.clientY);
-        showToast("🤑 Drąszcz już liczy odsetki…");
-      }
-    };
-  }
-  startHype();
-
   renderIdentity();
-  renderBanner();
-  renderCounter();
+  renderPayments();
+  renderFlight();
+  renderApartment();
+  renderExtras();
   setupChatWidget();
-  loadVotes();
-  subscribe();
+  startHype();
 })();

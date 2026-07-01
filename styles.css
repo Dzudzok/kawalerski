@@ -544,3 +544,91 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 28px
 @media (prefers-reduced-motion: reduce) {
   body::before, .vote-btn.change, .opt-body { animation: none; }
 }
+
+/* ============ STRONA INFORMACYJNA ============ */
+.apt-name { font-weight: 700; font-size: 18px; margin: 0 0 4px; }
+.mini-sum {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14.5px;
+}
+.mini-sum:last-of-type { border-bottom: none; }
+.mini-sum b { font-variant-numeric: tabular-nums; font-family: "Space Grotesk", sans-serif; }
+.ok { color: var(--green); }
+.due { color: var(--danger); }
+
+/* Mój status */
+.my-status { margin-top: 14px; }
+.ms-line { margin: 0; font-size: 15px; }
+.ms-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ms-item {
+  background: var(--glass-2); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.ms-item span { color: var(--muted); font-size: 12.5px; }
+.ms-item b { font-size: 20px; font-family: "Space Grotesk", sans-serif; }
+.ms-item.big { grid-column: 1 / -1; }
+.ms-item.big b { font-size: 26px; }
+.ms-note { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+.ms-note.ok { color: var(--green); }
+
+/* Podsumowanie płatności */
+.pay-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pt-card {
+  background: var(--glass-2); border: 1px solid var(--line); border-radius: 14px;
+  padding: 13px; text-align: center; display: flex; flex-direction: column; gap: 3px;
+}
+.pt-card span { color: var(--muted); font-size: 11.5px; }
+.pt-card b { font-size: 20px; font-family: "Space Grotesk", sans-serif; font-variant-numeric: tabular-nums; }
+.pt-card small { color: var(--muted); font-size: 10.5px; }
+.deadline {
+  margin: 14px 0; padding: 12px 14px; border-radius: 12px; font-size: 14px;
+  background: linear-gradient(135deg, rgba(255,138,61,.14), rgba(255,77,141,.14));
+  border: 1px solid rgba(255,138,61,.45);
+}
+
+/* Tabela zaliczek */
+.pay-table { margin-top: 6px; }
+.prow {
+  display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 8px; align-items: center;
+  padding: 11px 8px; border-bottom: 1px solid var(--line); font-size: 14px;
+}
+.prow.phead { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--line-strong); }
+.prow:last-child { border-bottom: none; }
+.prow.me { background: rgba(255,138,61,.10); border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(255,138,61,.35); }
+.prow.groom { opacity: .8; }
+.prow .pname { font-weight: 600; }
+.prow .pname em, .prow .ppaid em { color: var(--muted); font-style: normal; font-size: 12px; }
+.prow .ppaid, .prow .pleft { font-variant-numeric: tabular-nums; text-align: right; }
+.prow .pleft { font-weight: 700; }
+
+/* Lot */
+.leg { background: var(--glass-2); border: 1px solid var(--line); border-radius: 14px; padding: 13px; margin-bottom: 10px; }
+.leg-top { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+.leg-no { font-weight: 700; color: var(--text); }
+.leg-body { display: flex; align-items: center; gap: 8px; }
+.leg-pt { display: flex; flex-direction: column; }
+.leg-pt.right { text-align: right; margin-left: auto; }
+.leg-pt b { font-size: 14px; }
+.leg-pt span { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.leg-arrow { color: var(--accent); font-size: 16px; }
+.bookings { display: grid; gap: 8px; }
+.bk {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center;
+  background: var(--glass-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13.5px;
+}
+.bk-code { font-family: "Space Grotesk", sans-serif; font-weight: 700; letter-spacing: .04em; color: var(--accent); }
+.bk-who { color: var(--muted); font-size: 12.5px; }
+.bk-amt { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+
+/* Domek */
+.gallery-2 { grid-template-columns: repeat(3, 1fr); }
+.checks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+.check { background: var(--glass-2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; display: flex; flex-direction: column; gap: 2px; }
+.check span { color: var(--muted); font-size: 12px; }
+.check b { font-size: 14px; }
+.rules-wrap { margin-top: 16px; }
+.rules { margin: 0; padding: 0; list-style: none; }
+.rules li { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.rules li:last-child { border-bottom: none; }
+.map-shot-btn { display: block; width: 100%; margin-top: 16px; }
+.map-shot-btn img { width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line); }

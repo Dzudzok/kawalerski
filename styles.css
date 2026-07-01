@@ -632,3 +632,44 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 28px
 .rules li:last-child { border-bottom: none; }
 .map-shot-btn { display: block; width: 100%; margin-top: 16px; }
 .map-shot-btn img { width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line); }
+
+/* ====== ETAPY WPŁAT + PASKI POSTĘPU ====== */
+.sub-head { margin: 18px 0 10px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+
+.timeline { position: relative; }
+.tl-node { display: flex; gap: 14px; padding-bottom: 16px; position: relative; }
+.tl-node:not(:last-child)::before {
+  content: ""; position: absolute; left: 15px; top: 36px; bottom: 0; width: 2px; background: var(--line-strong);
+}
+.tl-dot {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; z-index: 1;
+  background: var(--grad-hot); color: #1a0e06; font-weight: 800; font-family: "Space Grotesk", sans-serif;
+  display: flex; align-items: center; justify-content: center;
+}
+.tl-body { flex: 1; min-width: 0; }
+.tl-when { font-weight: 700; font-size: 15px; }
+.tl-sub { color: var(--muted); font-weight: 500; font-size: 12px; }
+.tl-desc { color: var(--text); font-size: 13.5px; margin: 2px 0 5px; }
+.tl-amt { font-size: 13.5px; }
+.tl-amt b { font-family: "Space Grotesk", sans-serif; font-size: 17px; color: var(--accent); }
+.tl-cum { color: var(--muted); margin-left: 8px; font-size: 12px; }
+
+.progress-list { display: grid; gap: 12px; }
+.pg-row { padding: 11px 12px; border: 1px solid var(--line); border-radius: 13px; background: var(--glass-2); }
+.pg-row.me { border-color: rgba(255,138,61,.5); box-shadow: inset 0 0 0 1px rgba(255,138,61,.3); }
+.pg-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 9px; }
+.pg-name { font-weight: 600; font-size: 14px; }
+.pg-name em { color: var(--muted); font-style: normal; font-size: 12px; }
+.pg-paid { font-variant-numeric: tabular-nums; font-weight: 700; font-family: "Space Grotesk", sans-serif; }
+.pg-status { font-size: 12px; margin-top: 7px; font-weight: 600; }
+.pg-status.ok { color: var(--green); }
+.pg-status.warn { color: var(--accent); }
+.pg-status.due { color: var(--danger); }
+
+.pbar { position: relative; height: 12px; background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 999px; }
+.pbar-fill { height: 100%; background: var(--grad-hot); border-radius: 999px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.tick { position: absolute; top: -3px; width: 2px; height: 16px; background: var(--text); opacity: .5; border-radius: 2px; }
+
+.pbar-wrap { margin-top: 14px; }
+.pbar-scale { display: flex; justify-content: space-between; margin-top: 7px; font-size: 10.5px; color: var(--muted); gap: 6px; }
+.pbar-scale span { white-space: nowrap; }

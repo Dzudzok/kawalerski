@@ -30,6 +30,26 @@
 
   const remainingFor = (p) => Math.max(0, perPayer - (p.paid || 0));
 
+  // Etapy wpłat (narastająco). total = kwota całej ekipy w danym etapie.
+  const STAGE_DEFS = [
+    { when: "TERAZ", sub: "zaliczka", desc: "✈️ Samolot + 🏠 domek (1. część)", total: COSTS.flightTotal + PAYMENTS.apartmentPaid },
+    { when: "do 15.07", sub: "2026", desc: "🏠 Reszta za domek", total: PAYMENTS.apartmentDue },
+    { when: "do 30.07", sub: "2026", desc: "🚐 Transport (minibus) + reszta", total: minibusZl },
+  ];
+  // Doliczamy per osobę + progi narastające
+  let acc = 0;
+  const STAGES = STAGE_DEFS.map((s) => {
+    const per = s.total / N_PAYERS;
+    acc += per;
+    return Object.assign({}, s, { per: per, cum: acc });
+  });
+  const stageOf = (paid) => {
+    // ile etapów w pełni opłaconych (0..STAGES.length)
+    let done = 0;
+    for (const s of STAGES) { if (paid + 0.01 >= s.cum) done++; else break; }
+    return done;
+  };
+
   // ---------- Tożsamość + bramka ----------
   const WHO_KEY = "kawalerski_whoami";
   let whoami = localStorage.getItem(WHO_KEY) || "";
@@ -57,7 +77,7 @@
     $("#gateSelect").value = whoami;
     updateGate();
     renderMyStatus();
-    renderTable();
+    renderProgress();
     if (window.KawalerskiChat) KawalerskiChat.refresh();
   }
   function renderIdentity() {
@@ -79,58 +99,102 @@
       box.appendChild(el("p", "ms-line", `🤵 <strong>${firstName(me.name)}</strong>, jesteś Panem Młodym — <strong>nie płacisz nic. 0 zł 🎉</strong>`));
       return;
     }
-    const left = remainingFor(me);
+    const paid = me.paid || 0;
+    const zaliczka = STAGES[0].cum;                 // ile trzeba TERAZ
+    const dueNow = Math.max(0, zaliczka - paid);    // brakuje na zaliczkę
     box.appendChild(el("div", "ms-grid", `
-      <div class="ms-item"><span>Twój udział</span><b>${zl(perPayer)}</b></div>
-      <div class="ms-item"><span>Wpłacono</span><b class="ok">${zl(me.paid || 0)}</b></div>
-      <div class="ms-item big"><span>Zostało Ci dopłacić</span><b class="${left > 0 ? "due" : "ok"}">${left > 0 ? zl(left) : "0 zł ✅"}</b></div>
+      <div class="ms-item"><span>Zaliczka (teraz)</span><b>${zl(zaliczka)}</b></div>
+      <div class="ms-item"><span>Wpłacono</span><b class="ok">${zl(paid)}</b></div>
+      <div class="ms-item big"><span>${dueNow > 0 ? "Brakuje na zaliczkę (teraz)" : "Zaliczka opłacona"}</span>
+        <b class="${dueNow > 0 ? "due" : "ok"}">${dueNow > 0 ? zl(dueNow) : "✅ 0 zł"}</b></div>
     `));
-    if (left > 0) {
-      box.appendChild(el("p", "ms-note", `Termin dopłaty za domek: <strong>${PAYMENTS.apartmentDueDate}</strong>. Reszta pokrywa lot i minibus.`));
-    } else {
-      box.appendChild(el("p", "ms-note ok", "Wszystko wpłacone — dziękujemy! 🍻"));
-    }
+    box.appendChild(personBar(me));
+    const laterTotal = Math.max(0, perPayer - Math.max(paid, zaliczka));
+    box.appendChild(el("p", "ms-note",
+      dueNow > 0
+        ? `Najpierw dopłać zaliczkę. Później: do 15.07 jeszcze ${zl(STAGES[1].per)}, do 30.07 ${zl(STAGES[2].per)}.`
+        : (laterTotal > 0
+            ? `Zaliczka OK 👍 Dalej: do 15.07 ${zl(STAGES[1].per)}, do 30.07 ${zl(STAGES[2].per)}.`
+            : "Wszystko wpłacone — dziękujemy! 🍻")));
   }
 
-  // ---------- Zaliczki ----------
+  // Pasek postępu jednej osoby względem 3 etapów
+  function personBar(p) {
+    const paid = p.paid || 0;
+    const pct = Math.max(0, Math.min(100, (paid / perPayer) * 100));
+    const ticks = STAGES.slice(0, -1).map((s) =>
+      `<span class="tick" style="left:${(s.cum / perPayer) * 100}%"></span>`).join("");
+    const wrap = el("div", "pbar-wrap");
+    wrap.innerHTML =
+      `<div class="pbar"><div class="pbar-fill" style="width:${pct}%"></div>${ticks}</div>` +
+      `<div class="pbar-scale"><span>0</span><span>zaliczka ${zl(STAGES[0].cum)}</span><span>15.07</span><span>${zl(perPayer)}</span></div>`;
+    return wrap;
+  }
+
+  // ---------- Wpłaty ----------
   function renderPayments() {
+    const collectedNowTarget = STAGES[0].cum * N_PAYERS; // ile powinno być teraz (zaliczki)
     $("#payTotals").innerHTML = `
-      <div class="pt-card"><span>Koszt na osobę</span><b>${zl(perPayer)}</b><small>lot + domek + minibus</small></div>
-      <div class="pt-card"><span>Zebrane zaliczki</span><b class="ok">${zl(collected)}</b><small>${N_PAYERS} os. płacących</small></div>
-      <div class="pt-card"><span>Zostało do zebrania</span><b class="due">${zl(remainingTotal)}</b><small>łącznie od ekipy</small></div>`;
+      <div class="pt-card"><span>Zaliczka / os (teraz)</span><b>${zl(STAGES[0].cum)}</b><small>samolot + domek cz.1</small></div>
+      <div class="pt-card"><span>Zebrane zaliczki</span><b class="ok">${zl(collected)}</b><small>z ${zl(collectedNowTarget)} potrzebnych</small></div>
+      <div class="pt-card"><span>Koszt całości / os</span><b>${zl(perPayer)}</b><small>do 30.07</small></div>`;
 
-    $("#payDeadline").innerHTML = `
-      <div class="deadline">⏰ Domek: dopłata <strong>${zl(PAYMENTS.apartmentDue)}</strong> do <strong>${PAYMENTS.apartmentDueDate}</strong>
-      <span class="muted">(zapłacono już ${zl(PAYMENTS.apartmentPaid)})</span></div>`;
-
-    renderTable();
+    renderTimeline();
+    renderProgress();
 
     $("#payFoot").innerHTML =
-      `„Udział" = koszty stałe (lot ${zl(flightPer)} + domek ${zl(aptPer)} + minibus ${zl(busPer)}) na 1 osobę płacącą. ` +
-      `Pan Młody nie płaci — jego część już wliczona. Alkohol, jedzenie i imprezy dochodzą osobno.`;
+      `Etapy: <strong>teraz</strong> ${zl(STAGES[0].per)} (lot ${zl(flightPer)} + domek cz.1 ${zl(PAYMENTS.apartmentPaid / N_PAYERS)}), ` +
+      `<strong>15.07</strong> ${zl(STAGES[1].per)} (reszta domku), <strong>30.07</strong> ${zl(STAGES[2].per)} (minibus). ` +
+      `Pan Młody nie płaci. Alkohol, jedzenie i imprezy — osobno, na miejscu.`;
   }
 
-  function renderTable() {
-    const t = $("#payTable");
+  function renderTimeline() {
+    const t = $("#timeline");
     t.innerHTML = "";
-    const head = el("div", "prow phead");
-    head.innerHTML = `<span>Osoba</span><span>Wpłacono</span><span>Brakuje</span>`;
-    t.appendChild(head);
+    STAGES.forEach((s, i) => {
+      const node = el("div", "tl-node");
+      node.innerHTML = `
+        <div class="tl-dot">${i + 1}</div>
+        <div class="tl-body">
+          <div class="tl-when">${s.when} <span class="tl-sub">${s.sub}</span></div>
+          <div class="tl-desc">${s.desc}</div>
+          <div class="tl-amt"><b>${zl(s.per)}</b> / os<span class="tl-cum">razem do ${zl(s.cum)}</span></div>
+        </div>`;
+      t.appendChild(node);
+    });
+  }
 
+  function renderProgress() {
+    const box = $("#progress");
+    box.innerHTML = "";
     PARTICIPANTS.forEach((p) => {
-      const row = el("div", "prow" + (p.name === whoami ? " me" : "") + (!p.pays ? " groom" : ""));
+      const row = el("div", "pg-row" + (p.name === whoami ? " me" : ""));
       if (!p.pays) {
-        row.innerHTML =
-          `<span class="pname">${p.name} <em>🤵</em></span><span class="ppaid">—</span><span class="pleft ok">nie płaci</span>`;
-      } else {
-        const left = remainingFor(p);
-        const paidTxt = zl(p.paid || 0) + (p.note ? ` <em>(${p.note})</em>` : "");
-        row.innerHTML =
-          `<span class="pname">${p.name}</span>` +
-          `<span class="ppaid">${paidTxt}</span>` +
-          `<span class="pleft ${left > 0 ? "due" : "ok"}">${left > 0 ? zl(left) : "✅ 0 zł"}</span>`;
+        row.innerHTML = `<div class="pg-head"><span class="pg-name">${p.name} 🤵</span><span class="pg-status ok">nie płaci</span></div>`;
+        box.appendChild(row);
+        return;
       }
-      t.appendChild(row);
+      const paid = p.paid || 0;
+      const done = stageOf(paid);
+      const pct = Math.max(0, Math.min(100, (paid / perPayer) * 100));
+      let status, cls;
+      if (done >= STAGES.length) { status = "✅ wszystko"; cls = "ok"; }
+      else {
+        const need = STAGES[done].cum - paid;
+        const labels = ["zaliczka (teraz)", "do 15.07", "do 30.07"];
+        status = `brakuje ${zl(need)} — ${labels[done]}`;
+        cls = done === 0 ? "due" : "warn";
+      }
+      const ticks = STAGES.slice(0, -1).map((s) =>
+        `<span class="tick" style="left:${(s.cum / perPayer) * 100}%"></span>`).join("");
+      row.innerHTML = `
+        <div class="pg-head">
+          <span class="pg-name">${p.name}${p.note ? ` <em>(${p.note})</em>` : ""}</span>
+          <span class="pg-paid">${zl(paid)}</span>
+        </div>
+        <div class="pbar"><div class="pbar-fill" style="width:${pct}%"></div>${ticks}</div>
+        <div class="pg-status ${cls}">${status}</div>`;
+      box.appendChild(row);
     });
   }
 

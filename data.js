@@ -101,3 +101,67 @@ const EXTRAS = [
   "🎉 Imprezy / atrakcje",
   "🚗 Dojazd do lotniska w Katowicach",
 ];
+
+/* Ważne daty (odliczanie) */
+const KEY_DATES = {
+  departure: "2026-07-30T20:35:00",  // wylot
+  return: "2026-08-03T00:30:00",     // przylot z powrotem
+  payDeadline: "2026-07-15T23:59:00",// dopłata za domek
+};
+
+/* Harmonogram (plan roboczy — do ustalenia) */
+const PLAN = [
+  { day: "Czwartek 30.07", tag: "przylot", items: [
+    "✈️ Wylot Katowice 20:35 → Split 22:15",
+    "🚐 Minibus z lotniska do domku",
+    "🔑 Zameldowanie (skrytka), rozpakowanie",
+    "🛁 Pierwsze piwo w jacuzzi",
+  ]},
+  { day: "Piątek 31.07", tag: "pełny dzień", items: [
+    "☕ Wspólne śniadanie",
+    "🏖️ Plaża / morze",
+    "🍖 Grill wieczorem",
+    "🎉 Wyjście na miasto (Split / Bačvice)",
+  ]},
+  { day: "Sobota 01.08", tag: "główny dzień", items: [
+    "🌅 Śniadanie",
+    "🚤 Atrakcja dnia (opcjonalnie łódź na morzu)",
+    "🍽️ Sobota: restauracja (każdy za siebie)",
+    "🎉 Główna impreza kawalerska 🍾",
+  ]},
+  { day: "Niedziela 02.08", tag: "wyjazd", items: [
+    "🧹 Sprzątanie domku (śmieci, urządzenia, klucze na stole)",
+    "🏖️ Ostatnie godziny nad morzem",
+    "🚐 Minibus na lotnisko",
+    "✈️ Powrót Split 22:45 → Katowice 00:30",
+  ]},
+];
+
+/* Lista do spakowania (odhaczasz, zapisuje się w telefonie) */
+const PACKING = [
+  "Dowód / paszport",
+  "Karta pokładowa (Wizz w apce)",
+  "Gotówka + karta (euro/kuny)",
+  "Telefon + ładowarka + powerbank",
+  "Stroje kąpielowe",
+  "Krem z filtrem 🧴",
+  "Okulary przeciwsłoneczne",
+  "Klapki / buty na plażę",
+  "Ubranie na imprezę",
+  "Leki własne + coś na kaca 😅",
+  "Szczoteczka / kosmetyki",
+  "Dobry humor 🍺",
+];
+
+/* Info o bagażu Wizz Air (mały bagaż za darmo, reszta płatna) */
+const WIZZ_BAG = [
+  "🎒 Mała torba (40×30×20 cm) — za darmo, pod fotel",
+  "🧳 Większy bagaż / walizka — tylko jeśli dokupiony",
+  "🧴 Płyny max 100 ml w bagażu podręcznym",
+  "⏰ Bądź na lotnisku ~2h przed wylotem",
+];
+
+/* Kontakt */
+const CONTACTS = [
+  { who: "Mateusz Durczok", role: "organizator / świadek", phone: "531 025 216" },
+];

@@ -40,7 +40,7 @@ body::before {
 }
 
 .sound-toggle {
-  position: fixed; top: max(14px, env(safe-area-inset-top)); left: 14px; z-index: 140;
+  position: fixed; top: max(14px, env(safe-area-inset-top)); right: 14px; z-index: 210;
   width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
   border: 1px solid var(--line-strong); background: rgba(16, 19, 30, 0.8); backdrop-filter: blur(8px);
   color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center;
@@ -693,3 +693,67 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 28px
 .adm-quick button:active { transform: scale(.97); }
 .admin-link { color: var(--muted); font-size: 12px; text-decoration: none; }
 .admin-link:active { color: var(--accent); }
+
+/* ====== ROZBUDOWA: nawigacja, odliczanie, plan, ekipa, pakowanie ====== */
+html { scroll-behavior: smooth; }
+.section-title { scroll-margin-top: 64px; }
+
+/* Sticky nawigacja */
+.nav {
+  position: sticky; top: 0; z-index: 60; display: flex; gap: 8px; overflow-x: auto;
+  padding: 10px 66px 10px 14px; background: rgba(10, 12, 19, 0.82); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line); scrollbar-width: none; -ms-overflow-style: none;
+}
+.nav::-webkit-scrollbar { display: none; }
+.nav a {
+  flex-shrink: 0; text-decoration: none; color: var(--muted); font-size: 13px; font-weight: 600;
+  padding: 8px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--glass-2); white-space: nowrap;
+  transition: all .2s ease;
+}
+.nav a.active { color: #1a0e06; background: var(--grad-hot); border-color: transparent; }
+
+/* Odliczanie */
+.countdown { display: flex; gap: 10px; justify-content: center; margin: 4px 0 16px; flex-wrap: wrap; }
+.cd-item { background: var(--glass); border: 1px solid var(--line); border-radius: 16px; padding: 11px 18px; text-align: center; backdrop-filter: blur(8px); }
+.cd-item b { display: block; font-family: "Space Grotesk", sans-serif; font-size: 28px; line-height: 1; color: var(--accent); }
+.cd-item span { font-size: 11px; color: var(--muted); }
+.cd-item.warn b { color: var(--danger); }
+
+/* Kolorowy pasek etapowy */
+.segbar-wrap { margin-top: 12px; }
+.segbar { display: flex; gap: 4px; height: 18px; }
+.seg { position: relative; flex: 1; background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.seg-fill { position: absolute; top: 0; left: 0; bottom: 0; width: 0; transition: width .5s ease; }
+.seg.done { border-color: rgba(54,192,143,.55); }
+.seg.done .seg-fill { width: 100% !important; background: var(--grad-sea); }
+.seg.part .seg-fill { background: linear-gradient(90deg, #ff8a3d, #ffd24d); }
+.seg-labels { display: flex; gap: 4px; margin-top: 7px; }
+.seg-lab { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.seg-date { font-size: 11px; font-weight: 700; color: var(--muted); }
+.seg-date.ok { color: var(--green); }
+.seg-amt { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Plan */
+.plan-day { border-left: 2px solid var(--line-strong); padding: 0 0 18px 16px; position: relative; }
+.plan-day::before { content: ""; position: absolute; left: -7px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--grad-hot); }
+.plan-day:last-of-type { padding-bottom: 4px; }
+.plan-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.plan-date { font-weight: 700; font-size: 15px; }
+.plan-tag { font-size: 11px; color: var(--accent); background: rgba(255,138,61,.12); padding: 3px 10px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
+.plan-items { margin: 0; padding-left: 18px; }
+.plan-items li { padding: 3px 0; font-size: 14px; }
+
+/* Ekipa */
+.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.team-item { background: var(--glass-2); border: 1px solid var(--line); border-radius: 13px; padding: 12px 13px; display: flex; flex-direction: column; gap: 2px; }
+.team-item.groom { border-color: rgba(255,200,60,.55); background: rgba(255,200,60,.08); }
+.team-item.me { box-shadow: inset 0 0 0 1px rgba(255,138,61,.4); border-color: rgba(255,138,61,.5); }
+.team-name { font-weight: 700; font-size: 15px; }
+.team-role { font-size: 11.5px; color: var(--muted); }
+
+/* Pakowanie */
+.pack-list { display: grid; gap: 8px; }
+.pack-item { display: flex; align-items: center; gap: 12px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--glass-2); cursor: pointer; font-size: 14.5px; }
+.pack-item input { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
+.pack-item.checked { opacity: .55; }
+.pack-item.checked span { text-decoration: line-through; }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0c13" />
   <title>Kawalerski Dawida 🍺 — Split (info wyjazdu)</title>
-  <meta name="description" content="Wszystko o wyjeździe: zaliczki, lot, domek, koszty." />
+  <meta name="description" content="Wszystko o wyjeździe: wpłaty, plan, lot, domek, co spakować." />
   <link rel="preconnect" href="https://a0.muscache.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,13 +20,13 @@
   </audio>
   <button id="soundToggle" class="sound-toggle" type="button" aria-label="Muzyka">🎵</button>
 
-  <!-- Bramka: kim jesteś (personalizacja + start muzyki) -->
+  <!-- Bramka: kim jesteś -->
   <div class="gate" id="gate">
     <div class="gate-card">
       <div class="gate-emoji">🍺</div>
       <p class="gate-kicker">Kawalerski Dawida • Split</p>
       <h2>Cześć! Kim jesteś?</h2>
-      <p class="muted">Wybierz siebie, żeby zobaczyć ile dokładnie masz jeszcze dopłacić.</p>
+      <p class="muted">Wybierz siebie, żeby zobaczyć swój status wpłat i spersonalizowane info.</p>
       <select id="gateSelect" class="who-select" aria-label="Wybierz kim jesteś"></select>
     </div>
   </div>
@@ -37,24 +37,31 @@
       <p class="kicker">🍺 Kawalerski • Pan Młody: <b>Dawid Gajdosz</b> 🤵</p>
       <h1 id="heroTitle">SPLIT 🇭🇷</h1>
       <p class="subtitle" id="heroDates">30.07 – 02.08.2026</p>
-      <div class="pills">
-        <span class="pill">👥 9 osób</span>
-        <span class="pill">🛬 Wizz Air</span>
-        <span class="pill">🏠 domek z jacuzzi</span>
-      </div>
+      <div id="countdown" class="countdown"></div>
       <p class="hype" id="hype"></p>
     </div>
   </header>
 
+  <!-- Sticky nawigacja -->
+  <nav class="nav" id="nav">
+    <a href="#sec-pay">💰 Wpłaty</a>
+    <a href="#sec-plan">🗓️ Plan</a>
+    <a href="#sec-flight">✈️ Lot</a>
+    <a href="#sec-apt">🏠 Domek</a>
+    <a href="#sec-team">👥 Ekipa</a>
+    <a href="#sec-pack">🎒 Spakuj</a>
+    <a href="#sec-contact">📞 Kontakt</a>
+  </nav>
+
   <main>
     <section class="identity card" id="identityCard">
-      <h2>💳 Twój status wpłat</h2>
-      <p class="muted small">Wybierz siebie — pokażę ile już wpłaciłeś i ile Ci zostało.</p>
+      <h2>💳 Twój status</h2>
+      <p class="muted small">Wybierz siebie — pokażę ile masz jeszcze dopłacić i na kiedy.</p>
       <select id="whoami" class="who-select" aria-label="Wybierz kim jesteś"></select>
       <div id="myStatus" class="my-status" hidden></div>
     </section>
 
-    <div class="section-title"><h2>💰 Wpłaty — plan i status</h2></div>
+    <div class="section-title" id="sec-pay"><h2>💰 Wpłaty — plan i status</h2></div>
     <section class="card" id="paymentsCard">
       <div id="payTotals" class="pay-totals"></div>
       <div class="sub-head">🗓️ Plan wpłat (etapy)</div>
@@ -64,17 +71,28 @@
       <p class="muted small" id="payFoot"></p>
     </section>
 
-    <div class="section-title"><h2>💸 Gdzie wpłacać</h2></div>
     <section class="card" id="payInfoCard"></section>
 
-    <div class="section-title"><h2>✈️ Lot</h2></div>
+    <div class="section-title" id="sec-plan"><h2>🗓️ Plan wyjazdu</h2></div>
+    <section class="card" id="planCard"></section>
+
+    <div class="section-title" id="sec-flight"><h2>✈️ Lot</h2></div>
     <section class="card" id="flightCard"></section>
 
-    <div class="section-title"><h2>🏠 Domek</h2></div>
+    <div class="section-title" id="sec-apt"><h2>🏠 Domek</h2></div>
     <section class="card" id="aptCard"></section>
 
     <div class="section-title"><h2>🚐 Transport & reszta</h2></div>
     <section class="card" id="extrasCard"></section>
+
+    <div class="section-title" id="sec-team"><h2>👥 Ekipa (9 osób)</h2></div>
+    <section class="card" id="teamCard"></section>
+
+    <div class="section-title" id="sec-pack"><h2>🎒 Co spakować</h2></div>
+    <section class="card" id="packCard"></section>
+
+    <div class="section-title" id="sec-contact"><h2>📞 Kontakt</h2></div>
+    <section class="card" id="contactCard"></section>
 
     <a class="chat-page-link card" href="chat.html">💬 Otwórz czat grupowy (komunikator) →</a>
   </main>

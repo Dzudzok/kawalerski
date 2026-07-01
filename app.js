@@ -82,6 +82,7 @@
     updateGate();
     renderMyStatus();
     renderProgress();
+    renderTeam();
     if (window.KawalerskiChat) KawalerskiChat.refresh();
   }
   function renderIdentity() {
@@ -112,7 +113,7 @@
       <div class="ms-item big"><span>${dueNow > 0 ? "Brakuje na zaliczkę (teraz)" : "Zaliczka opłacona"}</span>
         <b class="${dueNow > 0 ? "due" : "ok"}">${dueNow > 0 ? zl(dueNow) : "✅ 0 zł"}</b></div>
     `));
-    box.appendChild(personBar(me));
+    box.appendChild(segBar(paid));
     const laterTotal = Math.max(0, perPayer - Math.max(paid, zaliczka));
     box.appendChild(el("p", "ms-note",
       dueNow > 0
@@ -122,16 +123,22 @@
             : "Wszystko wpłacone — dziękujemy! 🍻")));
   }
 
-  // Pasek postępu jednej osoby względem 3 etapów
-  function personBar(p) {
-    const paid = p.paid || 0;
-    const pct = Math.max(0, Math.min(100, (paid / perPayer) * 100));
-    const ticks = STAGES.slice(0, -1).map((s) =>
-      `<span class="tick" style="left:${(s.cum / perPayer) * 100}%"></span>`).join("");
-    const wrap = el("div", "pbar-wrap");
-    wrap.innerHTML =
-      `<div class="pbar"><div class="pbar-fill" style="width:${pct}%"></div>${ticks}</div>` +
-      `<div class="pbar-scale"><span>0</span><span>zaliczka ${zl(STAGES[0].cum)}</span><span>15.07</span><span>${zl(perPayer)}</span></div>`;
+  // Kolorowy pasek etapowy (3 równe kroki) z datami pod kreskami.
+  const STAGE_DATES = ["teraz", "15.07", "30.07"];
+  function segBar(paid) {
+    paid = paid || 0;
+    let prev = 0;
+    let segs = "", labs = "";
+    STAGES.forEach((s, i) => {
+      const frac = Math.max(0, Math.min(1, (paid - prev) / s.per));
+      const cls = frac >= 1 ? "done" : (frac > 0 ? "part" : "todo");
+      segs += `<div class="seg ${cls}"><div class="seg-fill" style="width:${frac * 100}%"></div></div>`;
+      const done = paid + 0.01 >= s.cum;
+      labs += `<div class="seg-lab"><span class="seg-date ${done ? "ok" : ""}">${done ? "✅ " : ""}${STAGE_DATES[i]}</span><span class="seg-amt">${zl(s.per)}</span></div>`;
+      prev = s.cum;
+    });
+    const wrap = el("div", "segbar-wrap");
+    wrap.innerHTML = `<div class="segbar">${segs}</div><div class="seg-labels">${labs}</div>`;
     return wrap;
   }
 
@@ -190,15 +197,13 @@
         status = `brakuje ${zl(need)} — ${labels[done]}`;
         cls = done === 0 ? "due" : "warn";
       }
-      const ticks = STAGES.slice(0, -1).map((s) =>
-        `<span class="tick" style="left:${(s.cum / perPayer) * 100}%"></span>`).join("");
       row.innerHTML = `
         <div class="pg-head">
           <span class="pg-name">${p.name}${p.note ? ` <em>(${p.note})</em>` : ""}</span>
           <span class="pg-paid">${zl(paid)}</span>
-        </div>
-        <div class="pbar"><div class="pbar-fill" style="width:${pct}%"></div>${ticks}</div>
-        <div class="pg-status ${cls}">${status}</div>`;
+        </div>`;
+      row.appendChild(segBar(paid));
+      row.appendChild(el("div", "pg-status " + cls, status));
       box.appendChild(row);
     });
   }
@@ -225,7 +230,9 @@
       <div class="mini-sum"><span>Razem za loty</span><b>${zl(FLIGHT.total)}</b></div>
       <div class="mini-sum"><span>Na osobę płacącą (${N_PAYERS})</span><b>${zl(flightPer)}</b></div>
       <p class="hl-title" style="margin-top:16px">Kody potwierdzenia (kto na jakim)</p>
-      <div class="bookings">${bookings}</div>`;
+      <div class="bookings">${bookings}</div>
+      <p class="hl-title" style="margin-top:18px">🧳 Bagaż Wizz Air — ważne!</p>
+      <ul class="rules">${WIZZ_BAG.map((b) => `<li>${b}</li>`).join("")}</ul>`;
   }
 
   // ---------- Domek ----------
@@ -311,6 +318,92 @@
       <div class="mini-sum"><span>Na osobę płacącą (${N_PAYERS})</span><b>${zl(busPer)}</b></div>
       <p class="hl-title" style="margin-top:18px">Do tego dochodzi jeszcze (osobno / na miejscu)</p>
       <ul class="rules">${EXTRAS.map((e) => `<li>${e}</li>`).join("")}</ul>`;
+  }
+
+  // ---------- Odliczanie ----------
+  function renderCountdown() {
+    const box = $("#countdown");
+    if (!box) return;
+    const now = new Date();
+    const days = (iso) => Math.max(0, Math.ceil((new Date(iso) - now) / 86400000));
+    const dDep = days(KEY_DATES.departure);
+    const dPay = days(KEY_DATES.payDeadline);
+    box.innerHTML =
+      `<div class="cd-item"><b>${dDep}</b><span>dni do wylotu ✈️</span></div>` +
+      `<div class="cd-item ${dPay <= 7 ? "warn" : ""}"><b>${dPay}</b><span>dni do dopłaty (15.07)</span></div>`;
+  }
+
+  // ---------- Plan ----------
+  function renderPlan() {
+    $("#planCard").innerHTML =
+      PLAN.map((d) => `
+        <div class="plan-day">
+          <div class="plan-head"><span class="plan-date">${d.day}</span><span class="plan-tag">${d.tag}</span></div>
+          <ul class="plan-items">${d.items.map((i) => `<li>${i}</li>`).join("")}</ul>
+        </div>`).join("") +
+      `<p class="muted small">Plan roboczy — szczegóły dogadamy na czacie 😉</p>`;
+  }
+
+  // ---------- Ekipa ----------
+  function renderTeam() {
+    $("#teamCard").innerHTML =
+      `<div class="team-grid">${PARTICIPANTS.map((p) => `
+        <div class="team-item ${!p.pays ? "groom" : ""} ${p.name === whoami ? "me" : ""}">
+          <span class="team-name">${firstName(p.name)}</span>
+          <span class="team-role">${p.tag || "ekipa"}</span>
+        </div>`).join("")}</div>`;
+  }
+
+  // ---------- Pakowanie (checklista) ----------
+  function renderPacking() {
+    const c = $("#packCard");
+    const KEY = "kawalerski_pack";
+    let state = {};
+    try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+    c.innerHTML =
+      `<div class="pack-list">${PACKING.map((it, i) => `
+        <label class="pack-item ${state[i] ? "checked" : ""}">
+          <input type="checkbox" data-i="${i}" ${state[i] ? "checked" : ""}/>
+          <span>${it}</span>
+        </label>`).join("")}</div>
+      <p class="muted small">✅ Zaznaczenia zapisują się w Twoim telefonie.</p>`;
+    c.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+      cb.onchange = () => {
+        state[cb.getAttribute("data-i")] = cb.checked;
+        localStorage.setItem(KEY, JSON.stringify(state));
+        cb.closest(".pack-item").classList.toggle("checked", cb.checked);
+      };
+    });
+  }
+
+  // ---------- Kontakt ----------
+  function renderContact() {
+    $("#contactCard").innerHTML =
+      CONTACTS.map((k) => `
+        <div class="payinfo-row">
+          <div class="pi-left"><span class="pi-label">${k.who} — ${k.role}</span><span class="pi-val">${k.phone}</span></div>
+          <a class="pi-copy" href="tel:${k.phone.replace(/\s/g, "")}">📞 Zadzwoń</a>
+        </div>`).join("") +
+      `<p class="muted small">W nagłych sprawach dzwoń do organizatora.</p>`;
+  }
+
+  // ---------- Scrollspy nawigacji ----------
+  function setupNav() {
+    const nav = $("#nav");
+    if (!nav || !("IntersectionObserver" in window)) return;
+    const links = Array.from(nav.querySelectorAll("a"));
+    const map = {};
+    links.forEach((a) => { map[a.getAttribute("href").slice(1)] = a; });
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) {
+          links.forEach((l) => l.classList.remove("active"));
+          const a = map[en.target.id];
+          if (a) { a.classList.add("active"); a.scrollIntoView({ inline: "center", block: "nearest" }); }
+        }
+      });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    Object.keys(map).forEach((id) => { const s = document.getElementById(id); if (s) obs.observe(s); });
   }
 
   // ---------- Gdzie wpłacać ----------
@@ -411,12 +504,19 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
 
   renderIdentity();
+  renderCountdown();
+  setInterval(renderCountdown, 60000);
   renderPayments();
   renderPayInfo();
+  renderPlan();
   renderFlight();
   renderApartment();
   renderExtras();
+  renderTeam();
+  renderPacking();
+  renderContact();
   setupChatWidget();
+  setupNav();
   startHype();
   loadPayments();
   subscribePayments();

@@ -49,32 +49,41 @@
       // ===== USTAW SWÓJ PIN =====
       var ADMIN_PIN = "1267";
 
-      var cfgOk = window.SUPABASE_URL && !String(window.SUPABASE_URL).startsWith("WKLEJ");
-      var sb = cfgOk ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY) : null;
+      var $ = function (s) { return document.querySelector(s); };
       var TABLE = "kawalerski_payments";
+      var sb = null;
+      try {
+        if (window.SUPABASE_URL && String(window.SUPABASE_URL).indexOf("WKLEJ") !== 0 && window.supabase) {
+          sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+        }
+      } catch (e) { sb = null; }
 
-      var payers = PARTICIPANTS.filter(function (p) { return p.pays; });
-      var N = payers.length;
-      var minibusZl = COSTS.minibusEUR * TRIP.eurRate;
-      var zaliczka = (COSTS.flightTotal + PAYMENTS.apartmentPaid) / N;
-      var perPayer = (COSTS.flightTotal + COSTS.apartmentTotal + minibusZl) / N;
+      // Dane finansowe (odporne na błędy)
+      var payers = [], N = 0, zaliczka = 0, perPayer = 0;
+      try {
+        payers = PARTICIPANTS.filter(function (p) { return p.pays; });
+        N = payers.length;
+        var minibusZl = COSTS.minibusEUR * TRIP.eurRate;
+        zaliczka = (COSTS.flightTotal + PAYMENTS.apartmentPaid) / N;
+        perPayer = (COSTS.flightTotal + COSTS.apartmentTotal + minibusZl) / N;
+      } catch (e) {}
       var zl = function (n) { return Number(n).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " zł"; };
       var round2 = function (n) { return Math.round(n * 100) / 100; };
 
-      var $ = function (s) { return document.querySelector(s); };
-
-      // PIN gate (persist w localStorage)
+      // ---- LOGOWANIE (wire od razu, niezależnie od reszty) ----
       function unlocked() { return localStorage.getItem("kawalerski_admin_ok") === "1"; }
       function tryPin() {
-        if ($("#pin").value === ADMIN_PIN) {
+        var val = ($("#pin").value || "").trim();
+        if (val === ADMIN_PIN) {
           localStorage.setItem("kawalerski_admin_ok", "1");
+          $("#pinMsg").textContent = "";
           openPanel();
         } else {
-          $("#pinMsg").textContent = "Zły PIN.";
+          $("#pinMsg").textContent = "Zły PIN. Spróbuj ponownie.";
         }
       }
-      $("#pinBtn").onclick = tryPin;
-      $("#pin").addEventListener("keydown", function (e) { if (e.key === "Enter") tryPin(); });
+      $("#pinBtn").addEventListener("click", function (e) { e.preventDefault(); tryPin(); });
+      $("#pin").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); tryPin(); } });
 
       function openPanel() {
         $("#pinCard").hidden = true;

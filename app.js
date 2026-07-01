@@ -508,7 +508,6 @@
   setInterval(renderCountdown, 60000);
   renderPayments();
   renderPayInfo();
-  renderPlan();
   renderFlight();
   renderApartment();
   renderExtras();
